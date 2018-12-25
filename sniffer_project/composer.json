@@ -16,6 +16,7 @@
         "cakephp/bake": "^1.1",
         "cakephp/cakephp-codesniffer": "^3.0",
         "cakephp/debug_kit": "^3.15.0",
+        "phpunit/phpunit": "^5|^6",
         "psy/psysh": "@stable"
     },
     "suggest": {
@@ -42,9 +43,10 @@
             "@test",
             "@cs-check"
         ],
-        "cs-check": "phpcs --colors -p --standard=vendor/cakephp/cakephp-codesniffer/CakePHP src/ tests/",
+        "cs-check": "phpcs --version --colors -p --standard=vendor/cakephp/cakephp-codesniffer/CakePHP src/ tests/",
+        "cs": "vendor/bin/phpcs -vvv -s --standard=vendor/cakephp/cakephp-codesniffer/CakePHP --sniffs=CakePHP.ControlStructures.ControlStructures src/Controller/SampleController.php",
         "cs-fix": "phpcbf --colors --standard=vendor/cakephp/cakephp-codesniffer/CakePHP src/ tests/",
-        "test": "phpunit --colors=always"
+        "test": "vendor/bin/phpunit --colors=always"
     },
     "prefer-stable": true,
     "config": {
