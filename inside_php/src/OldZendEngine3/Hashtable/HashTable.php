@@ -1,8 +1,8 @@
 <?php
 
-namespace App\ZendEngine3\Hashtable;
+namespace App\OldZendEngine3\Hashtable;
 
-use App\ZendEngine3\Structures\Zval;
+use App\OldZendEngine3\Structures\Zval;
 
 class HashTable extends Injectable {
     /* Zend/zend_types.h line 274 */

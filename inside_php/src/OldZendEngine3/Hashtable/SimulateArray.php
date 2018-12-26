@@ -1,6 +1,6 @@
 <?php
 
-namespace App\ZendEngine3\Hashtable;
+namespace App\OldZendEngine3\Hashtable;
 
 class SimulateArray extends Injectable {
     /** @var HashTable */

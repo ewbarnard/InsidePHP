@@ -25,3 +25,4 @@
 /vendors/*
 /InsidePHP.iml
 /.idea/
+/inside_php/composer.phar

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\ZendEngine3\Structures;
+namespace App\OldZendEngine3\Structures;
 /**
  * Class Zval
  *
