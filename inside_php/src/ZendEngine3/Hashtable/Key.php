@@ -20,6 +20,10 @@ class Key extends Injectable {
         return $this->key;
     }
 
+    public function stringKey(): ?string {
+        return $this->isIntegerKey ? null : $this->key;
+    }
+
     /**
      * @param mixed $key
      */

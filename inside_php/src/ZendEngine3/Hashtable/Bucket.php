@@ -32,14 +32,10 @@ class Bucket {
         return $this->val ? $this->val->next : null;
     }
 
-    public function unNext(): void {
-        if ($this->val) {
-            $this->val->setNext(null);
-        }
-    }
-
     public function setNext(int $value): void {
-
+        if ($this->val) {
+            $this->val->setNext($value);
+        }
     }
 
     public function unset(): void {

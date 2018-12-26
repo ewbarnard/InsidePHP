@@ -48,6 +48,7 @@ class HashTableWalker extends Injectable {
         $found = $this->walkCollisionChain();
         if ($found) {
             $this->removeFromCollisionChain();
+            --$this->hashtable->nNumOfElements;
         }
         return $found;
     }
