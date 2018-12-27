@@ -121,7 +121,7 @@ final class HashResize {
      *
      * @param HashTable $ht
      */
-    private static function setUnitializedBucket(HashTable $ht): void {
+    private static function setUninitializedBucket(HashTable $ht): void {
         $ht->arHash = [HashTable::HT_INVALID_IDX, HashTable::HT_INVALID_IDX];
         $ht->arData = [null, null];
     }
@@ -145,7 +145,7 @@ final class HashResize {
         }
         $ht->HASH_FLAG_STATIC_KEYS = 1;
         $ht->nTableMask = HashTable::HT_MIN_MASK;
-        static::setUnitializedBucket($ht);
+        static::setUninitializedBucket($ht);
         $ht->nNumUsed = 0;
         $ht->nNumOfElements = 0;
         $ht->nInternalPointer = 0;
@@ -191,7 +191,58 @@ final class HashResize {
         static::_zend_hash_init_int($ht, $nSize, ZendVariables::ZVAL_PTR_DTOR, 0);
         return $ht;
     }
-//FIXME 247
+
+    /**
+     * Zend/zend_hash.c line 247
+     *
+     * @param HashTable $ht
+     * @throws \Exception
+     */
+    public static function zend_hash_packed_grow(HashTable $ht): void {
+        if ($ht->nTableSize >= HashTable::HT_MAX_SIZE) {
+            throw new \Exception('Possible integer overflow in memory allocation');
+        }
+        static::doubleTableSize($ht);
+    }
+
+    /**
+     * Zend/zend_hash.c line 257
+     *
+     * @param HashTable $ht
+     * @param bool $packed
+     * @throws \Exception
+     */
+    public static function zend_hash_real_init(HashTable $ht, bool $packed): void {
+        static::zend_hash_real_init_ex($ht, $packed);
+    }
+
+    /**
+     * Zend/zend_hash.c line 265
+     *
+     * @param HashTable $ht
+     */
+    public static function zend_hash_real_init_packed(HashTable $ht): void {
+        static::zend_hash_real_init_packed_ex($ht);
+    }
+
+    /**
+     * Zend/zend_hash.c line 273
+     *
+     * @param HashTable $ht
+     */
+    public static function zend_hash_real_init_mixed(HashTable $ht): void {
+        static::zend_hash_real_init_mixed_ex($ht);
+    }
+
+    /**
+     * Zend/zend_hash.c line 281
+     *
+     * @param HashTable $ht
+     */
+    public static function zend_hash_packed_to_hash(HashTable $ht): void {
+//FIXME
+    }
+
     /**
      * Zend/zend_hash.c line 1112
      *
@@ -203,11 +254,7 @@ final class HashResize {
         if ($ht->nNumUsed > $ht->nNumOfElements + ($ht->nNumOfElements >> 5)) {
             static::zend_hash_rehash($ht);
         } elseif ($ht->nTableSize < HashTable::HT_MAX_SIZE) {
-            /* Let's double the table size */
-            $nSize = $ht->nTableSize + $ht->nTableSize;
-            $ht->arHash += \array_fill($ht->nTableSize, $ht->nTableSize, HashTable::HT_INVALID_IDX);
-            $ht->arData += \array_fill($ht->nTableSize, $ht->nTableSize, null);
-            $ht->nTableSize = $nSize;
+            self::doubleTableSize($ht);
             $ht->nTableMask = static::HT_SIZE_TO_MASK($ht->nTableSize);
         } else {
             throw new \Exception('Possible integer overflow in memory allocation');
@@ -315,7 +362,7 @@ final class HashResize {
      * @param HashTable $ht
      */
     public static function HT_HASH_RESET_PACKED(HashTable $ht): void {
-        static::setUnitializedBucket($ht);
+        static::setUninitializedBucket($ht);
     }
 
     /**
@@ -347,6 +394,17 @@ final class HashResize {
      */
     public static function HT_HAS_ITERATORS(HashTable $ht): bool {
         return (static::HT_ITERATORS_COUNT($ht) !== 0);
+    }
+
+    /**
+     * @param HashTable $ht
+     */
+    private static function doubleTableSize(HashTable $ht): void {
+        /* Let's double the table size */
+        $nSize = $ht->nTableSize + $ht->nTableSize;
+        $ht->arHash += \array_fill($ht->nTableSize, $ht->nTableSize, HashTable::HT_INVALID_IDX);
+        $ht->arData += \array_fill($ht->nTableSize, $ht->nTableSize, null);
+        $ht->nTableSize = $nSize;
     }
 
 }
