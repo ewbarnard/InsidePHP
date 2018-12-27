@@ -34,6 +34,8 @@ class HashTable extends Injectable
     public $nInternalPointer;
 
     public $HASH_FLAG_INITIALIZED = 0;
+    public $HASH_FLAG_PACKED = 0;
+    public $IS_ARRAY_PERSISTENT = 0;
 
 //    /** @var int */
 //    public $nTableMask;

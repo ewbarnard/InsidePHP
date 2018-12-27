@@ -22,6 +22,98 @@ final class HashResize {
     }
 
     /**
+     * Zend/zend_hash.c line 85
+     *
+     * @param int $nSize
+     * @return int
+     * @throws \Exception
+     */
+    public static function zend_hash_check_size(int $nSize): int {
+        /* Use big enough power of 2 */
+        /* Size should be between HT_MIN_SIZE and HT_MAX_SIZE */
+        if ($nSize <= HashTable::HT_MIN_SIZE) {
+            return HashTable::HT_MIN_SIZE;
+        } elseif ($nSize >= HashTable::HT_MAX_SIZE) {
+            throw new \Exception('Possible integer overflow in memory allocation');
+        }
+
+        $nSize -= 1;
+        $nSize |= ($nSize >> 1);
+        $nSize |= ($nSize >> 2);
+        $nSize |= ($nSize >> 4);
+        $nSize |= ($nSize >> 8);
+        $nSize |= ($nSize >> 16);
+
+        return $nSize + 1;
+    }
+
+    /**
+     * Zend/zend_hash.c line 120
+     *
+     * The "packed hashtable" is for continuous, integer-indexed arrays ("real" arrays).
+     * The hash slots are NULL and lookups index directly into the bucket slots. If you
+     * are looking for key 5 then it will be at bucket 5 or not exist at all. There is
+     * no collision chain.
+     *
+     * @param HashTable $ht
+     */
+    public static function zend_hash_real_init_packed_ex(HashTable $ht): void {
+        $ht->HASH_FLAG_INITIALIZED = 1;
+        $ht->HASH_FLAG_PACKED = 1;
+        static::HT_HASH_RESET_PACKED($ht);
+    }
+
+    /**
+     * Zend/zend_hash.c line 136
+     *
+     * The real code allocates space for hash slots and bucket slots together:
+     *  - If we are representing a persistent array, we use pemalloc() to allocate space
+     *  - Otherwise we use the standard emalloc() to allocate space
+     *
+     * If we are initializing a standard (non-persistent) array that is the minimum size,
+     * we initialize both the hash slots and bucket slots to -1 to represent the empty array
+     *
+     * If we are initializing a larger standard array, we call HT_HASH_RESET() to set all the
+     * hash slots to -1. We leave the buckets uninitialized.
+     *
+     * @param HashTable $ht
+     */
+    public static function zend_hash_real_init_mixed_ex(HashTable $ht): void {
+        $nSize = $ht->nTableSize;
+        if ($nSize === HashTable::HT_MIN_SIZE) {
+            $ht->nTableMask = static::HT_SIZE_TO_MASK(HashTable::HT_MIN_SIZE);
+            $ht->HASH_FLAG_INITIALIZED = 1;
+            $ht->arData = \array_fill(0, HashTable::HT_MIN_SIZE, null);
+            $ht->arHash = \array_fill(0, HashTable::HT_MIN_SIZE, HashTable::HT_INVALID_IDX);
+            return;
+        }
+
+        /* We can't simulate "persistent array" so treat it the same as a larger standard array */
+        $ht->nTableMask = static::HT_SIZE_TO_MASK($nSize);
+        $ht->HASH_FLAG_INITIALIZED = 1;
+        static::HT_HASH_RESET($ht);
+    }
+
+    /**
+     * Zend/zend_hash.c line 185
+     *
+     * @param HashTable $ht
+     * @param int $packed
+     * @throws \Exception
+     */
+    public static function zend_hash_real_init_ex(HashTable $ht, int $packed): void {
+        if ($ht->HASH_FLAG_INITIALIZED) {
+            throw new \Exception('HashTable already initialized');
+        }
+        if ($packed) {
+            static::zend_hash_real_init_packed_ex($ht);
+        } else {
+            static::zend_hash_real_init_mixed_ex($ht);
+        }
+    }
+
+
+    /**
      * Zend/zend_hash.c line 1112
      *
      * @param HashTable $ht
@@ -134,6 +226,18 @@ final class HashResize {
      */
     public static function HT_HASH_RESET(HashTable $ht): void {
         $ht->arHash = \array_fill(0, $ht->nTableSize, HashTable::HT_INVALID_IDX);
+        /* Simulate leaving the buckets uninitialized */
+        $ht->arData = [];
+    }
+
+    /**
+     * Zend/zend_types.h line 336
+     *
+     * @param HashTable $ht
+     */
+    public static function HT_HASH_RESET_PACKED(HashTable $ht): void {
+        $ht->arHash = [HashTable::HT_INVALID_IDX];
+        $ht->arData = [];
     }
 
     /**
@@ -147,16 +251,6 @@ final class HashResize {
     }
 
     /**
-     * Zend/zend_hash.h line 62
-     *
-     * @param HashTable $ht
-     * @return bool
-     */
-    public static function HT_HAS_ITERATORS(HashTable $ht): bool {
-        return (static::HT_ITERATORS_COUNT($ht) !== 0);
-    }
-
-    /**
      * Zend/zend_hash.h line 60
      *
      * @param HashTable $ht
@@ -166,4 +260,15 @@ final class HashResize {
         // Might not have this implementation correct, actual field buried in a union
         return $ht->nIteratorsCount;
     }
+
+    /**
+     * Zend/zend_hash.h line 62
+     *
+     * @param HashTable $ht
+     * @return bool
+     */
+    public static function HT_HAS_ITERATORS(HashTable $ht): bool {
+        return (static::HT_ITERATORS_COUNT($ht) !== 0);
+    }
+
 }
