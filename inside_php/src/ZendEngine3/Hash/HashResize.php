@@ -12,6 +12,8 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 78
+     * If the hashtable can be compacted, do so.
+     * Otherwise double its size and initialize the second half appropriately
      *
      * @param HashTable $ht
      * @throws \Exception
@@ -24,6 +26,11 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 85
+     * Check and normalize the requested hashtable size.
+     * It needs to be between the min and max allowed size. Min is 8, and max
+     * differs depending on whether we have 32-bit or 64-bit word size.
+     * The size normalization appears to be aimed at getting us on a multiple
+     * of a page boundary, but I'm not sure.
      *
      * @param int $nSize
      * @return int
@@ -97,6 +104,7 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 185
+     * We do different initialization for packed or mixed hashtables
      *
      * @param HashTable $ht
      * @param int $packed
@@ -117,7 +125,8 @@ final class HashResize {
      * Based on Zend/zend_hash.c line 196
      *
      * The uninitialized bucket is compiled in for efficiency's sake.
-     * All uninitialized hash tables point to this same bucket.
+     * All uninitialized hash tables point to this same bucket. We can't simulate that, so
+     * just set the hash and bucket slots to something simulating the outcome.
      *
      * @param HashTable $ht
      */
@@ -128,6 +137,9 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 213
+     * Set up an empty array. There is no need to allocate space for the buckets and hash slots.
+     * HASH_FLAG_INITIALIZED remains zero, indicating that if we ever add any elements to this
+     * array, we'll first need to allocate space for bucket/hash slots.
      *
      * @param HashTable $ht
      * @param int $nSize
@@ -156,6 +168,7 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 228
+     * Set up an empty array.
      *
      * @param HashTable $ht
      * @param int $nSize
@@ -169,6 +182,7 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 233
+     * Set up an empty array with the minimum allocation size and default Zval destructor.
      *
      * @return HashTable
      * @throws \Exception
@@ -181,6 +195,9 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 240
+     * Set up an empty array with a specified allocation size and default Zval destructor.
+     * Although the allocation size is set, space is not yet allocated - it will be the first
+     * time we add an element to the array.
      *
      * @param int $nSize
      * @return HashTable
@@ -194,6 +211,7 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 247
+     * Increase the space allocation for this hashtable.
      *
      * @param HashTable $ht
      * @throws \Exception
@@ -207,6 +225,8 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 257
+     * Initialize the hashtable - allocate space for the bucket and hash slots; set the bucket
+     * slots to null (unused); set the hash slots to invalid-index (unused).
      *
      * @param HashTable $ht
      * @param bool $packed
@@ -218,6 +238,9 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 265
+     * Initialize the hashtable as a packed array - the bucket slot is the same as the
+     * numeric key and the hash slots are unused. The bucket slots are set to null, indicating
+     * no buckets are yet in use. It's an empty packed hashtable.
      *
      * @param HashTable $ht
      */
@@ -227,6 +250,8 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 273
+     * Initialize the hashtable - allocate space for the bucket and hash slots, setting
+     * each to invalid/unused.
      *
      * @param HashTable $ht
      */
@@ -236,15 +261,52 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 281
+     * Convert a packed hashtable to a regular (mixed) hashtable. For each bucket
+     * slot containing a valid bucket, set the corresponding hash slot to point to
+     * its bucket. At this point it's a one-to-one correspondence with no collisions.
+     *
+     * @param HashTable $ht
+     * @throws \Exception
+     */
+    public static function zend_hash_packed_to_hash(HashTable $ht): void {
+        $nSize = $ht->nTableSize;
+
+        $ht->HASH_FLAG_PACKED = 0;
+        $ht->nTableMask = static::HT_SIZE_TO_MASK($ht->nTableSize);
+        static::zend_hash_rehash($ht);
+    }
+
+    /**
+     * Zend/zend_hash.c line 297
+     * Convert a regular hashtable to a packed hashtable. We assume the buckets are already
+     * correctly set up. We flag it as packed and invalidate the hash slots. The packed table
+     * does not use the hash slots at all.
      *
      * @param HashTable $ht
      */
-    public static function zend_hash_packed_to_hash(HashTable $ht): void {
-//FIXME
+    public static function zend_hash_to_packed(HashTable $ht): void {
+        $ht->HASH_FLAG_PACKED = 1;
+        $ht->HASH_FLAG_STATIC_KEYS = 1;
+        $ht->nTableMask = HashTable::HT_MIN_MASK;
+        $ht->arHash = [HashTable::HT_INVALID_IDX, HashTable::HT_INVALID_IDX];
+    }
+
+    /**
+     * Zend/zend_hash.c line 312
+     *
+     * @param HashTable $ht
+     * @param int $nSize
+     * @param bool $packed
+     */
+    public static function zend_hash_extend(HashTable $ht, int $nSize, bool $packed): void {
+        //FIXME 312
     }
 
     /**
      * Zend/zend_hash.c line 1112
+     * Compact the table if there are enough unused slots to make it worthwhile.
+     * Otherwise, assuming the table is less than the maximum allowed size, double
+     * its size and initialize the new part as appropriate.
      *
      * @param HashTable $ht
      * @throws \Exception
@@ -263,8 +325,8 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 1137
-     * Compress bucket slots to remove inactive buckets
-     * "Next" pointers on collision chain always point to lower-numbered slots
+     * Compress bucket slots to remove inactive buckets.
+     * "Next" pointers on collision chain always point to lower-numbered slots.
      *
      * @param HashTable $ht
      * @return int
@@ -353,7 +415,7 @@ final class HashResize {
     public static function HT_HASH_RESET(HashTable $ht): void {
         $ht->arHash = \array_fill(0, $ht->nTableSize, HashTable::HT_INVALID_IDX);
         /* Simulate leaving the buckets uninitialized */
-        $ht->arData = [];
+        $ht->arData = \array_fill(0, $ht->nTableSize, null);
     }
 
     /**
