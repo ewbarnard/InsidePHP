@@ -269,8 +269,6 @@ final class HashResize {
      * @throws \Exception
      */
     public static function zend_hash_packed_to_hash(HashTable $ht): void {
-        $nSize = $ht->nTableSize;
-
         $ht->HASH_FLAG_PACKED = 0;
         $ht->nTableMask = static::HT_SIZE_TO_MASK($ht->nTableSize);
         static::zend_hash_rehash($ht);
@@ -297,8 +295,35 @@ final class HashResize {
      * @param HashTable $ht
      * @param int $nSize
      * @param bool $packed
+     * @throws \Exception
      */
     public static function zend_hash_extend(HashTable $ht, int $nSize, bool $packed): void {
+        if ($nSize === 0) {
+            return;
+        }
+        if (!$ht->HASH_FLAG_INITIALIZED) {
+            // Not yet initialized
+            if ($nSize > $ht->nTableSize) {
+                $ht->nTableSize = static::zend_hash_check_size($nSize);
+            }
+            static::zend_hash_real_init($ht, $packed);
+        } else {
+            // Has been previously initialized
+            if ($packed) {
+                if (!$ht->HASH_FLAG_PACKED) {
+                    throw new \Exception('Unpacked hashtable being extended as packed');
+                }
+                if ($nSize > $ht->nTableSize) {
+                    // Expanding packed hashtable
+                    $delta = $nSize - $ht->nTableSize;
+                    $ht->nTableSize = static::zend_hash_check_size($nSize);
+                    $ht->arData += \array_fill($ht->nTableSize, $delta, null);
+                }
+            } else {
+                // Expanding regular hashtable
+                //FIXME 328
+            }
+        }
         //FIXME 312
     }
 
