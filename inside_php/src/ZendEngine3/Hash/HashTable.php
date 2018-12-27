@@ -42,6 +42,9 @@ class HashTable extends Injectable
     public $HASH_FLAG_PACKED = 0;
     public $HASH_FLAG_STATIC_KEYS = 0; /* long and interned strings */
     public $IS_ARRAY_PERSISTENT = 0;
+    public $GC_TYPE_INFO = 0;
+    public $GC_PERSISTENT = 0;
+    public $GC_COLLECTABLE = 0;
 
 //    /** @var int */
 //    public $flags;

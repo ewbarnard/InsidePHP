@@ -3,6 +3,7 @@
 namespace App\ZendEngine3\Hash;
 
 use App\ZendEngine3\Zval\ZendTypes;
+use App\ZendEngine3\Zval\ZendVariables;
 use App\ZendEngine3\Zval\Zval;
 
 final class HashResize {
@@ -28,7 +29,7 @@ final class HashResize {
      * @return int
      * @throws \Exception
      */
-    public static function zend_hash_check_size(int $nSize): int {
+    private static function zend_hash_check_size(int $nSize): int {
         /* Use big enough power of 2 */
         /* Size should be between HT_MIN_SIZE and HT_MAX_SIZE */
         if ($nSize <= HashTable::HT_MIN_SIZE) {
@@ -57,7 +58,7 @@ final class HashResize {
      *
      * @param HashTable $ht
      */
-    public static function zend_hash_real_init_packed_ex(HashTable $ht): void {
+    private static function zend_hash_real_init_packed_ex(HashTable $ht): void {
         $ht->HASH_FLAG_INITIALIZED = 1;
         $ht->HASH_FLAG_PACKED = 1;
         static::HT_HASH_RESET_PACKED($ht);
@@ -78,7 +79,7 @@ final class HashResize {
      *
      * @param HashTable $ht
      */
-    public static function zend_hash_real_init_mixed_ex(HashTable $ht): void {
+    private static function zend_hash_real_init_mixed_ex(HashTable $ht): void {
         $nSize = $ht->nTableSize;
         if ($nSize === HashTable::HT_MIN_SIZE) {
             $ht->nTableMask = static::HT_SIZE_TO_MASK(HashTable::HT_MIN_SIZE);
@@ -101,7 +102,7 @@ final class HashResize {
      * @param int $packed
      * @throws \Exception
      */
-    public static function zend_hash_real_init_ex(HashTable $ht, int $packed): void {
+    private static function zend_hash_real_init_ex(HashTable $ht, int $packed): void {
         if ($ht->HASH_FLAG_INITIALIZED) {
             throw new \Exception('HashTable already initialized');
         }
@@ -120,7 +121,7 @@ final class HashResize {
      *
      * @param HashTable $ht
      */
-    public static function setUnitializedBucket(HashTable $ht): void {
+    private static function setUnitializedBucket(HashTable $ht): void {
         $ht->arHash = [HashTable::HT_INVALID_IDX, HashTable::HT_INVALID_IDX];
         $ht->arData = [null, null];
     }
@@ -128,14 +129,20 @@ final class HashResize {
     /**
      * Zend/zend_hash.c line 213
      *
-     * Ignoring persistent flag since we're not supporting ref counts or garbage collection
-     *
      * @param HashTable $ht
      * @param int $nSize
      * @param callable $pDestructor
+     * @param bool $persistent
      * @throws \Exception
      */
-    public static function _zend_hash_init_int(HashTable $ht, int $nSize, callable $pDestructor): void {
+    private static function _zend_hash_init_int(HashTable $ht, int $nSize, callable $pDestructor,
+        bool $persistent): void {
+        $ht->GC_TYPE_INFO = Zval::IS_ARRAY;
+        if ($persistent) {
+            $ht->GC_PERSISTENT = 1;
+        } else {
+            $ht->GC_COLLECTABLE = 1;
+        }
         $ht->HASH_FLAG_STATIC_KEYS = 1;
         $ht->nTableMask = HashTable::HT_MIN_MASK;
         static::setUnitializedBucket($ht);
@@ -148,12 +155,50 @@ final class HashResize {
     }
 
     /**
+     * Zend/zend_hash.c line 228
+     *
+     * @param HashTable $ht
+     * @param int $nSize
+     * @param callable $pDestructor
+     * @param bool $persistent
+     * @throws \Exception
+     */
+    public static function _zend_hash_init(HashTable $ht, int $nSize, callable $pDestructor, bool $persistent): void {
+        static::_zend_hash_init_int($ht, $nSize, $pDestructor, $persistent);
+    }
+
+    /**
+     * Zend/zend_hash.c line 233
+     *
+     * @return HashTable
+     * @throws \Exception
+     */
+    public static function _zend_new_array_0(): HashTable {
+        $ht = new HashTable();
+        static::_zend_hash_init_int($ht, HashTable::HT_MIN_SIZE, ZendVariables::ZVAL_PTR_DTOR, 0);
+        return $ht;
+    }
+
+    /**
+     * Zend/zend_hash.c line 240
+     *
+     * @param int $nSize
+     * @return HashTable
+     * @throws \Exception
+     */
+    public static function _zend_new_array(int $nSize): HashTable {
+        $ht = new HashTable();
+        static::_zend_hash_init_int($ht, $nSize, ZendVariables::ZVAL_PTR_DTOR, 0);
+        return $ht;
+    }
+//FIXME 247
+    /**
      * Zend/zend_hash.c line 1112
      *
      * @param HashTable $ht
      * @throws \Exception
      */
-    public static function zend_hash_do_resize(HashTable $ht): void {
+    private static function zend_hash_do_resize(HashTable $ht): void {
         /* Additional term is there to amortize the cost of compaction */
         if ($ht->nNumUsed > $ht->nNumOfElements + ($ht->nNumOfElements >> 5)) {
             static::zend_hash_rehash($ht);
