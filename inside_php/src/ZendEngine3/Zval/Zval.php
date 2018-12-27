@@ -4,13 +4,13 @@ namespace App\ZendEngine3\Zval;
 
 /**
  * Class Zval
+ *
  * @package App\ZendEngine3\Zval
  *
  * Reference: Zend/zend_types.h
  * https://github.com/php/php-src/blob/master/Zend/zend_types.h
  */
-class Zval
-{
+class Zval {
     /* Regular data types, Zend/zend_types.h line 382 */
     public CONST IS_UNDEF = 0;
     public CONST IS_NULL = 1;
@@ -25,11 +25,16 @@ class Zval
     public CONST IS_REFERENCE = 10;
 
     public $value; // zend_value (mixed, 8 bytes)
-    public $type; // zend_uchar (unsigned 8-bit integer)
+    public $type = self::IS_UNDEF; // zend_uchar (unsigned 8-bit integer)
     public $next; // uint32_t - hash collision chain
 
-    public function invalidate(): void
-    {
+    public static function COPY_VALUE(Zval $destination, Zval $source): void {
+        $destination->value = $source->value;
+        $destination->type = $source->type;
+        $destination->next = $source->next;
+    }
+
+    public function invalidate(): void {
         $this->type = static::IS_UNDEF;
         $this->next = null;
     }
@@ -37,8 +42,7 @@ class Zval
     /**
      * @param int|null $value
      */
-    public function setNext($value): void
-    {
+    public function setNext($value): void {
         $this->next = $value;
     }
 

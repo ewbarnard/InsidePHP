@@ -29,6 +29,12 @@ class HashTable extends Injectable
     /** @var int */
     public $nTableMask;
 
+    public $nIteratorsCount = 0;
+    /** @var int */
+    public $nInternalPointer;
+
+    public $HASH_FLAG_INITIALIZED = 0;
+
 //    /** @var int */
 //    public $nTableMask;
 //    /** @var int */
