@@ -8,6 +8,7 @@ class HashTable extends Injectable
     /* Zend/zend_types.h line 274 */
     public CONST HT_INVALID_IDX = -1;
     public CONST HT_MIN_SIZE = 8;
+    public CONST HT_MIN_MASK = -2;
 
     /* For 32-bit words; set small enough to avoid overflow checks */
     public CONST HT_MAX_SIZE = 0x04000000;
@@ -32,23 +33,16 @@ class HashTable extends Injectable
     public $nIteratorsCount = 0;
     /** @var int */
     public $nInternalPointer;
+    /** @var int */
+    public $nNextFreeElement;
+    /** @var callable */
+    public $pDestructor;
 
     public $HASH_FLAG_INITIALIZED = 0;
     public $HASH_FLAG_PACKED = 0;
+    public $HASH_FLAG_STATIC_KEYS = 0; /* long and interned strings */
     public $IS_ARRAY_PERSISTENT = 0;
 
-//    /** @var int */
-//    public $nTableMask;
-//    /** @var int */
-//    public $nNextFreeElement;
-//    /** @var Bucket[] Array elements, allocated in powers of two */
-//    public $arData = [];
-//    /** @var int[] */
-//    public $arHash = [];
-//    /** @var callable */
-//    public $pDestructor;
-//    /** @var int */
-//    public $nInternalPointer;
 //    /** @var int */
 //    public $flags;
 //    /** @var int */

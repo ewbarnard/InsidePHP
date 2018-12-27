@@ -112,6 +112,40 @@ final class HashResize {
         }
     }
 
+    /**
+     * Based on Zend/zend_hash.c line 196
+     *
+     * The uninitialized bucket is compiled in for efficiency's sake.
+     * All uninitialized hash tables point to this same bucket.
+     *
+     * @param HashTable $ht
+     */
+    public static function setUnitializedBucket(HashTable $ht): void {
+        $ht->arHash = [HashTable::HT_INVALID_IDX, HashTable::HT_INVALID_IDX];
+        $ht->arData = [null, null];
+    }
+
+    /**
+     * Zend/zend_hash.c line 213
+     *
+     * Ignoring persistent flag since we're not supporting ref counts or garbage collection
+     *
+     * @param HashTable $ht
+     * @param int $nSize
+     * @param callable $pDestructor
+     * @throws \Exception
+     */
+    public static function _zend_hash_init_int(HashTable $ht, int $nSize, callable $pDestructor): void {
+        $ht->HASH_FLAG_STATIC_KEYS = 1;
+        $ht->nTableMask = HashTable::HT_MIN_MASK;
+        static::setUnitializedBucket($ht);
+        $ht->nNumUsed = 0;
+        $ht->nNumOfElements = 0;
+        $ht->nInternalPointer = 0;
+        $ht->nNextFreeElement = 0;
+        $ht->pDestructor = $pDestructor;
+        $ht->nTableSize = static::zend_hash_check_size($nSize);
+    }
 
     /**
      * Zend/zend_hash.c line 1112
@@ -236,8 +270,7 @@ final class HashResize {
      * @param HashTable $ht
      */
     public static function HT_HASH_RESET_PACKED(HashTable $ht): void {
-        $ht->arHash = [HashTable::HT_INVALID_IDX];
-        $ht->arData = [];
+        static::setUnitializedBucket($ht);
     }
 
     /**
