@@ -2,13 +2,15 @@
 
 namespace App\ZendEngine3\Hash;
 
-use App\ZendEngine3\Zval\Zval;
+use App\ZendEngine3\ZendTypes\HashTable;
+use App\ZendEngine3\ZendTypes\Zval;
 
 class HashIterator {
     private function __construct() { // Static only
     }
 
     /**
+     * Extern Zend/zend_hash.h line 306
      * Zend/zend_hash.c line 428
      *
      * @param HashTable $ht
@@ -24,6 +26,7 @@ class HashIterator {
     }
 
     /**
+     * Extern Zend/zend_hash.h line 307
      * Zend/zend_hash.c line 465
      *
      * @param int $idx
@@ -39,6 +42,7 @@ class HashIterator {
     }
 
     /**
+     * Extern Zend/zend_hash.h line 308
      * Zend/zend_hash.c line 484
      *
      * @param int $idx
@@ -54,6 +58,7 @@ class HashIterator {
     }
 
     /**
+     * Extern Zend/zend_hash.h line 309
      * Zend/zend_hash.c line 506
      *
      * @param int $idx
@@ -91,6 +96,7 @@ class HashIterator {
     }
 
     /**
+     * Extern Zend/zend_hash.h line 310
      * Zend/zend_hash.c line 546
      *
      * @param HashTable $ht
@@ -106,6 +112,7 @@ class HashIterator {
     }
 
     /**
+     * Extern Zend/zend_hash.h line 311
      * Zend/zend_hash.c line 563
      *
      * @param HashTable $ht
@@ -120,6 +127,7 @@ class HashIterator {
     }
 
     /**
+     * Extern Zend/zend_hash.h line 312
      * Zend/zend_hash.c line 576
      *
      * @param HashTable $ht
@@ -132,4 +140,17 @@ class HashIterator {
         }
     }
 
+    /**
+     * Zend/zend_hash.h line 314
+     *
+     * @param HashTable $ht
+     * @param int $from
+     * @param int $to
+     * @throws \Exception
+     */
+    public static function zend_hash_iterators_update(HashTable $ht, int $from, int $to): void {
+        if (HashTable::HT_HAS_ITERATORS($ht)) {
+            static::_zend_hash_iterators_update($ht, $from, $to);
+        }
+    }
 }

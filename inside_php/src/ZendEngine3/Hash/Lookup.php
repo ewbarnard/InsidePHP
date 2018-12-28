@@ -95,15 +95,6 @@ class Lookup {
 
     }
 
-    /**
-     * Zend/zend_hash.h line 264
-     *
-     * @param HashTable $ht
-     * @return int
-     */
-    public static function zend_hash_num_elements(HashTable $ht): int {
-        return $ht->nNumOfElements;
-    }
 
     public static function Z_ISUNDEF(HashTable $ht, int $slot): bool {
         $p = $ht->arData[$slot];

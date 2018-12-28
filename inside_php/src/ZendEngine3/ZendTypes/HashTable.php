@@ -188,6 +188,29 @@ class HashTable extends ZendArray {
     }
 
     /**
+     * Zend/zend_hash.h line 324
+     *
+     * @param HashTable $ht
+     * @throws \Exception
+     */
+    public static function ZEND_INIT_SYMTABLE(HashTable $ht): void {
+        static::ZEND_INIT_SYMTABLE_EX($ht, 8, 0);
+    }
+
+    /**
+     * Zend/zend_hash.h line 327
+     *
+     * @param HashTable $ht
+     * @param int $n
+     * @param bool $persistent
+     * @throws \Exception
+     */
+    public static function ZEND_INIT_SYMTABLE_EX(HashTable $ht, int $n, bool $persistent): void {
+        $dtor = function(){};
+        static::zend_hash_init($ht, $n, null, $dtor, $persistent);
+    }
+
+    /**
      * Zend/zend_types.h line 289 for 64-bit
      *
      * @param HashTable $ht

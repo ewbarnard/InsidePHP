@@ -3,6 +3,7 @@
 namespace App\ZendEngine3\Hash;
 
 use App\ZendEngine3\ZendTypes\HashTable;
+use http\Exception\InvalidArgumentException;
 
 /**
  * Class HashResize
@@ -20,6 +21,7 @@ final class HashResize {
      */
     public static function zend_hash_destroy(HashTable $ht): void {
     }
+
     /**
      * Extern Zend/zend_hash.h line 99
      *
@@ -185,6 +187,18 @@ final class HashResize {
     }
 
     /**
+     * Zend/zend_hash.h line 291
+     *
+     * @param int $size
+     * @return HashTable
+     * @throws \Exception
+     */
+    public static function zend_new_array(int $size): HashTable {
+        return static::_zend_new_array($size);
+    }
+
+    /**
+     * Extern Zend/zend_hash.h line 295
      * Zend/zend_hash.c line 233
      * Set up an empty array with the minimum allocation size and default ZendTypes destructor.
      *
@@ -198,6 +212,7 @@ final class HashResize {
     }
 
     /**
+     * Extern Zend/zend_hash.h line 296
      * Zend/zend_hash.c line 240
      * Set up an empty array with a specified allocation size and default ZendTypes destructor.
      * Although the allocation size is set, space is not yet allocated - it will be the first
@@ -212,6 +227,72 @@ final class HashResize {
         static::_zend_hash_init_int($ht, $nSize, ZendVariables::ZVAL_PTR_DTOR, 0);
         return $ht;
     }
+
+    /**
+     * Extern Zend/zend_hash.h line 297
+     *
+     * @param HashTable $ht
+     * @return int
+     */
+    public static function zend_array_count(HashTable $ht): int {
+    }
+
+    /**
+     * Extern Zend/zend_hash.h line 298
+     *
+     * @param HashTable $source
+     * @return HashTable
+     */
+    public static function zend_array_dup(HashTable $source): HashTable {
+    }
+
+    /**
+     * Extern Zend/zend_hash.h line 299
+     *
+     * @param HashTable $ht
+     */
+    public static function zend_array_destroy(HashTable $ht): void {
+    }
+
+    /**
+     * Extern Zend/zend_hash.h line 300
+     *
+     * @param HashTable $ht
+     */
+    public static function zend_symtable_clean(HashTable $ht): void {
+    }
+
+    /**
+     * Extern Zend/zend_hash.h line 301
+     *
+     * @param HashTable $ht
+     * @return HashTable
+     */
+    public static function zend_symtable_to_proptable(HashTable $ht): HashTable {
+    }
+
+    /**
+     * Extern Zend/zend_hash.h line 302
+     *
+     * @param HashTable $ht
+     * @param bool $always_duplicate
+     * @return HashTable
+     */
+    public static function zend_proptable_to_symtable(HashTable $ht, bool $always_duplicate): HashTable {
+    }
+
+    /**
+     * Extern Zend/zend_hash.h line 304
+     *
+     * @param string $key
+     * @param int $length
+     * @param int $idx
+     * @return int
+     */
+    public static function _zend_handle_numeric_str_ex(string $key, int $length, int $idx): int {
+    }
+
+//FIXME zend_hash.h line 330
 
     /**
      * Zend/zend_hash.c line 247
@@ -390,7 +471,9 @@ final class HashResize {
     }
 
     /**
+     * Extern Zend/zend_hash.h line 277
      * Zend/zend_hash.c line 1137
+     *
      * Compress bucket slots to remove inactive buckets.
      * "Next" pointers on collision chain always point to lower-numbered slots.
      * Our implementation uses null for uninitialized buckets rather than actual
