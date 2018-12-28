@@ -1,13 +1,13 @@
 <?php
 
-namespace App\ZendEngine3\Hash;
-
-use App\ZendEngine3\Zval\Zval;
+namespace App\ZendEngine3\ZendTypes;
 
 /**
  * Class Bucket
  *
- * @package App\ZendEngine3\Hash
+ * @package App\ZendEngine3\ZendTypes
+ *
+ * Zend/zend_types.h line 229
  *
  * A Bucket is an entry in the hashtable. It occupies one slot in arData.
  * However, in our PHP implementation, arData is an array of pointers to Buckets.
@@ -15,15 +15,16 @@ use App\ZendEngine3\Zval\Zval;
  * Integer keys are stored in $h (the hash value) because the array key and
  * hash value are identical in this case. When the key is an integer, $key is NULL.
  */
-class Bucket extends Injectable {
-    /** @var int The hashed key */
-    public $h;
-
-    /** @var string The array element's key, when the key is a string (null for integer keys) */
-    public $key;
-
+class Bucket {
     /** @var Zval The array element's value */
     public $val;
+
+    /** @var int The hashed key - hash value or numeric index */
+    public $h;
+
+    /** @var ZendString The array element's key, when the key is a string (null for integer keys) */
+    public $key;
+
 
     /**
      * @return int|string
@@ -33,7 +34,7 @@ class Bucket extends Injectable {
     }
 
     public function next(): ?int {
-        return $this->val ? $this->val->next : null;
+        return $this->val ? $this->val->u2_next : null;
     }
 
     public function setNext(int $value): void {

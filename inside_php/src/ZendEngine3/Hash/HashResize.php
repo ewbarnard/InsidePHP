@@ -2,12 +2,30 @@
 
 namespace App\ZendEngine3\Hash;
 
-use App\ZendEngine3\Zval\ZendTypes;
-use App\ZendEngine3\Zval\ZendVariables;
-use App\ZendEngine3\Zval\Zval;
+use App\ZendEngine3\ZendTypes\HashTable;
 
+/**
+ * Class HashResize
+ *
+ * @package App\ZendEngine3\Hash
+ */
 final class HashResize {
     private function __construct() { // Static only
+    }
+
+    /**
+     * Extern Zend/zend_hash.h line 98
+     *
+     * @param HashTable $ht
+     */
+    public static function zend_hash_destroy(HashTable $ht): void {
+    }
+    /**
+     * Extern Zend/zend_hash.h line 99
+     *
+     * @param HashTable $ht
+     */
+    public static function zend_hash_clean(HashTable $ht): void {
     }
 
     /**
@@ -122,20 +140,6 @@ final class HashResize {
     }
 
     /**
-     * Based on Zend/zend_hash.c line 196
-     *
-     * The uninitialized bucket is compiled in for efficiency's sake.
-     * All uninitialized hash tables point to this same bucket. We can't simulate that, so
-     * just set the hash and bucket slots to something simulating the outcome.
-     *
-     * @param HashTable $ht
-     */
-    private static function setUninitializedBucket(HashTable $ht): void {
-        $ht->arHash = [HashTable::HT_INVALID_IDX, HashTable::HT_INVALID_IDX];
-        $ht->arData = [null, null];
-    }
-
-    /**
      * Zend/zend_hash.c line 213
      * Set up an empty array. There is no need to allocate space for the buckets and hash slots.
      * HASH_FLAG_INITIALIZED remains zero, indicating that if we ever add any elements to this
@@ -182,7 +186,7 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 233
-     * Set up an empty array with the minimum allocation size and default Zval destructor.
+     * Set up an empty array with the minimum allocation size and default ZendTypes destructor.
      *
      * @return HashTable
      * @throws \Exception
@@ -195,7 +199,7 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 240
-     * Set up an empty array with a specified allocation size and default Zval destructor.
+     * Set up an empty array with a specified allocation size and default ZendTypes destructor.
      * Although the allocation size is set, space is not yet allocated - it will be the first
      * time we add an element to the array.
      *
@@ -426,7 +430,7 @@ final class HashResize {
                     $j = $i;
                     $qBucketSlot = $bucketSlot;
 
-                    if (!static::HT_HAS_ITERATORS($ht)) {
+                    if (!HashIterator::HT_HAS_ITERATORS($ht)) {
                         while (++$i < $ht->nNumUsed) {
                             ++$bucketSlot;
                             $p = $ht->arData[$bucketSlot];
@@ -460,105 +464,6 @@ final class HashResize {
             } while (++$i < $ht->nNumUsed);
         }
         return ZendTypes::SUCCESS;
-    }
-
-    /**
-     * Zend/zend_types.h line 304
-     *
-     * @param int $nTableSize
-     * @return int
-     */
-    public static function HT_SIZE_TO_MASK(int $nTableSize): int {
-        return (-($nTableSize + $nTableSize));
-    }
-
-    /**
-     * Zend/zend_types.h line 317
-     *
-     * @param HashTable $ht
-     */
-    public static function HT_HASH_RESET(HashTable $ht): void {
-        $ht->arHash = \array_fill(0, $ht->nTableSize, HashTable::HT_INVALID_IDX);
-        /* Simulate leaving the buckets uninitialized */
-        $ht->arData = \array_fill(0, $ht->nTableSize, null);
-    }
-
-    /**
-     * Zend/zend_types.h line 336
-     *
-     * @param HashTable $ht
-     */
-    public static function HT_HASH_RESET_PACKED(HashTable $ht): void {
-        static::setUninitializedBucket($ht);
-    }
-
-    /**
-     * Zend/zend_hash.h line 48
-     *
-     * @param HashTable $ht
-     * @return bool
-     */
-    public static function HT_IS_WITHOUT_HOLES(HashTable $ht): bool {
-        return ($ht->nNumUsed === $ht->nNumOfElements);
-    }
-
-    /**
-     * Zend/zend_hash.h line 60
-     *
-     * @param HashTable $ht
-     * @return int
-     */
-    public static function HT_ITERATORS_COUNT(HashTable $ht): int {
-        // Might not have this implementation correct, actual field buried in a union
-        return $ht->nIteratorsCount;
-    }
-
-    /**
-     * Zend/zend_hash.h line 61
-     *
-     * @param HashTable $ht
-     * @return bool
-     */
-    public static function HT_ITERATORS_OVERFLOW(HashTable $ht): bool {
-        return (static::HT_ITERATORS_COUNT($ht) === 0xff);
-    }
-
-    /**
-     * Zend/zend_hash.h line 62
-     *
-     * @param HashTable $ht
-     * @return bool
-     */
-    public static function HT_HAS_ITERATORS(HashTable $ht): bool {
-        return (static::HT_ITERATORS_COUNT($ht) !== 0);
-    }
-
-    /**
-     * Zend/zend_hash.h line 64
-     *
-     * @param HashTable $ht
-     * @param int $iters
-     */
-    public static function HT_SET_ITERATORS_COUNT(HashTable $ht, int $iters): void {
-        $ht->nIteratorsCount = $iters;
-    }
-
-    /**
-     * Zend/zend_hash.h line 66
-     *
-     * @param HashTable $ht
-     */
-    public static function HT_INC_ITERATORS_COUNT(HashTable $ht): void {
-        static::HT_SET_ITERATORS_COUNT($ht, static::HT_ITERATORS_COUNT($ht) + 1);
-    }
-
-    /**
-     * Zend/zend_hash.h line 68
-     *
-     * @param HashTable $ht
-     */
-    public static function HT_DEC_ITERATORS_COUNT(HashTable $ht): void {
-        static::HT_SET_ITERATORS_COUNT($ht, static::HT_ITERATORS_COUNT($ht) - 1);
     }
 
     /**

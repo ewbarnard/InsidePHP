@@ -1,17 +1,11 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: ewb
- * Date: 2018-12-27
- * Time: 13:30
- */
 
-namespace App\ZendEngine3\Zval;
+namespace App\ZendEngine3\ZendTypes;
 
 /**
  * Class ZendVariables
  *
- * @package App\ZendEngine3\Zval
+ * @package App\ZendEngine3\ZendTypes
  *
  * Based on Zend/zend_variables.c
  */

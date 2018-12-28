@@ -19,6 +19,7 @@ class Lookup {
         if ($ht) {
             throw new \Exception('ZEND_HASH_FOREACH not supported');
         }
+        return 0;
     }
 
     /**
@@ -83,84 +84,16 @@ class Lookup {
     }
 
     /**
-     * Zend/zend_hash.c line 428
+     * Zend/zend_hash.c line 589
      *
      * @param HashTable $ht
-     * @param int $pos
-     * @return int
-     * @throws \Exception
+     * @param string $key
+     * @param bool $known_hash
+     * @return Bucket
      */
-    public static function zend_hash_iterator_add(HashTable $ht, int $pos): int {
-        if ($ht || $pos) {
-            throw new \Exception('Iterator not supported');
-        }
-    }
+    private static function zend_hash_find_bucket(HashTable $ht, string $key, bool $known_hash): Bucket {
 
-    /**
-     * Zend/zend_hash.c line 465
-     *
-     * @param int $idx
-     * @param HashTable $ht
-     * @return int
-     * @throws \Exception
-     */
-    public static function zend_hash_iterator_pos(int $idx, HashTable $ht): int {
-        if ($idx || $ht) {
-            throw new \Exception('Iterator not supported');
-        }
     }
-
-    /**
-     * Zend/zend_hash.c line 484
-     *
-     * @param int $idx
-     * @param Zval $array
-     * @return int
-     * @throws \Exception
-     */
-    public static function zend_hash_iterator_pos_ex(int $idx, Zval $array): int {
-        if ($idx || $array) {
-            throw new \Exception('Iterator not supported');
-        }
-    }
-
-    /**
-     * Zend/zend_hash.c line 506
-     *
-     * @param int $idx
-     * @throws \Exception
-     */
-    public static function zend_hash_iterator_del(int $idx): void {
-        if ($idx) {
-            throw new \Exception('Iterator not supported');
-        }
-    }
-
-    /**
-     * Zend/zend_hash.c line 526
-     *
-     * @param HashTable $ht
-     * @throws \Exception
-     */
-    private static function _zend_hash_iterators_remove(HashTable $ht): void {
-        if ($ht) {
-            throw new \Exception('Iterator not supported');
-        }
-    }
-
-    /**
-     * Zend/zend_hash.c line 539
-     * Referenced lines 1539, 1589
-     *
-     * @param HashTable $ht
-     * @throws \Exception
-     */
-    private static function zend_hash_iterators_remove(HashTable $ht): void {
-        if (HashResize::HT_HAS_ITERATORS($ht)) {
-            static::_zend_hash_iterators_remove($ht);
-        }
-    }
-//FIXME 546
 
     /**
      * Zend/zend_hash.h line 264

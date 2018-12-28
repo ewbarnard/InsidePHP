@@ -2,7 +2,7 @@
 
 namespace App\OldZendEngine3\Structures;
 /**
- * Class Zval
+ * Class ZendTypes
  *
  * Reference: Zend/zend_types.h
  * https://github.com/php/php-src/blob/master/Zend/zend_types.h
