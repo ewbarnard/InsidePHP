@@ -291,6 +291,7 @@ final class HashResize {
 
     /**
      * Zend/zend_hash.c line 312
+     * Extend the hashtable to the specified size
      *
      * @param HashTable $ht
      * @param int $nSize
@@ -339,6 +340,31 @@ final class HashResize {
     }
 
     /**
+     * Zend/zend_hash.c line 346
+     * Discard elements - array_pop, perhaps?
+     *
+     * @param HashTable $ht
+     * @param int $nNumUsed
+     */
+    public static function zend_hash_discard(HashTable $ht, int $nNumUsed): void {
+        $pSlot = $ht->nNumUsed;
+        $endSlot = $nNumUsed;
+        $ht->nNumUsed = $nNumUsed;
+
+        while ($pSlot !== $endSlot) {
+            $pSlot--;
+            $p = $ht->arData[$pSlot];
+            if (!$p || ($p->val->type === Zval::IS_UNDEF)) {
+                continue;
+            }
+            $ht->nNumOfElements--;
+            /* Collision pointers always directed from higher to lower buckets */
+            $nIndex = $p->h | $ht->nTableMask;
+            $ht->arHash[$nIndex] = $p->val->next;
+        }
+    }
+
+    /**
      * Zend/zend_hash.c line 1112
      * Compact the table if there are enough unused slots to make it worthwhile.
      * Otherwise, assuming the table is less than the maximum allowed size, double
@@ -363,6 +389,8 @@ final class HashResize {
      * Zend/zend_hash.c line 1137
      * Compress bucket slots to remove inactive buckets.
      * "Next" pointers on collision chain always point to lower-numbered slots.
+     * Our implementation uses null for uninitialized buckets rather than actual
+     * bucket objects. In this method we need to check for null.
      *
      * @param HashTable $ht
      * @return int
@@ -392,17 +420,18 @@ final class HashResize {
                 $p = $ht->arData[++$bucketSlot];
             } while (++$i < $ht->nNumUsed);
         } else {
+            // Null checks needed here
             do {
-                if ($p->val->type === Zval::IS_UNDEF) {
+                if (($p === null) || ($p->val->type === Zval::IS_UNDEF)) {
                     $j = $i;
-                    $q = $p;
                     $qBucketSlot = $bucketSlot;
 
                     if (!static::HT_HAS_ITERATORS($ht)) {
                         while (++$i < $ht->nNumUsed) {
                             ++$bucketSlot;
                             $p = $ht->arData[$bucketSlot];
-                            if ($p->val->type !== Zval::IS_UNDEF) {
+                            if ($p && ($p->val->type !== Zval::IS_UNDEF)) {
+                                $q = static::ensureBucketInitialized($ht, $qBucketSlot);
                                 // Move Bucket down to fill in the hole
                                 Zval::COPY_VALUE($q->val, $p->val);
                                 $q->h = $p->h;
@@ -413,7 +442,7 @@ final class HashResize {
                                 if ($ht->nInternalPointer === $i) {
                                     $ht->nInternalPointer = $j;
                                 }
-                                $q = $ht->arData[++$qBucketSlot];
+                                ++$qBucketSlot;
                                 $j++;
                             }
                         }
@@ -505,4 +534,34 @@ final class HashResize {
         $ht->nTableSize = $nSize;
     }
 
+    /**
+     * @param HashTable $ht
+     * @param int $slot
+     * @throws \Exception
+     */
+    private static function initializeBucket(HashTable $ht, int $slot): void {
+        if ($slot >= $ht->nTableSize) {
+            throw new \Exception('Initializing out-of-range bucket');
+        }
+        $p = $ht->arData[$slot];
+        if ($p !== null) {
+            throw new \Exception('Bucket already initialized');
+        }
+        $p = new Bucket();
+        $p->val = new Zval();
+        $ht->arData[$slot] = $p;
+    }
+
+    /**
+     * @param HashTable $ht
+     * @param int $slot
+     * @return Bucket
+     * @throws \Exception
+     */
+    private static function ensureBucketInitialized(HashTable $ht, int $slot): Bucket {
+        if ($ht->arData[$slot] === null) {
+            static::initializeBucket($ht, $slot);
+        }
+        return $ht->arData[$slot];
+    }
 }
