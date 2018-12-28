@@ -32,12 +32,13 @@ class HashTable extends Injectable
 
     public $nIteratorsCount = 0;
     /** @var int */
-    public $nInternalPointer;
+    public $nInternalPointer = 0;
     /** @var int */
     public $nNextFreeElement;
     /** @var callable */
     public $pDestructor;
 
+    public $HASH_FLAG_HAS_EMPTY_IND = 0;
     public $HASH_FLAG_INITIALIZED = 0;
     public $HASH_FLAG_PACKED = 0;
     public $HASH_FLAG_STATIC_KEYS = 0; /* long and interned strings */

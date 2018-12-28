@@ -514,6 +514,16 @@ final class HashResize {
     }
 
     /**
+     * Zend/zend_hash.h line 61
+     *
+     * @param HashTable $ht
+     * @return bool
+     */
+    public static function HT_ITERATORS_OVERFLOW(HashTable $ht): bool {
+        return (static::HT_ITERATORS_COUNT($ht) === 0xff);
+    }
+
+    /**
      * Zend/zend_hash.h line 62
      *
      * @param HashTable $ht
@@ -521,6 +531,34 @@ final class HashResize {
      */
     public static function HT_HAS_ITERATORS(HashTable $ht): bool {
         return (static::HT_ITERATORS_COUNT($ht) !== 0);
+    }
+
+    /**
+     * Zend/zend_hash.h line 64
+     *
+     * @param HashTable $ht
+     * @param int $iters
+     */
+    public static function HT_SET_ITERATORS_COUNT(HashTable $ht, int $iters): void {
+        $ht->nIteratorsCount = $iters;
+    }
+
+    /**
+     * Zend/zend_hash.h line 66
+     *
+     * @param HashTable $ht
+     */
+    public static function HT_INC_ITERATORS_COUNT(HashTable $ht): void {
+        static::HT_SET_ITERATORS_COUNT($ht, static::HT_ITERATORS_COUNT($ht) + 1);
+    }
+
+    /**
+     * Zend/zend_hash.h line 68
+     *
+     * @param HashTable $ht
+     */
+    public static function HT_DEC_ITERATORS_COUNT(HashTable $ht): void {
+        static::HT_SET_ITERATORS_COUNT($ht, static::HT_ITERATORS_COUNT($ht) - 1);
     }
 
     /**
