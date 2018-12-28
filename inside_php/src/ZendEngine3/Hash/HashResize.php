@@ -315,16 +315,27 @@ final class HashResize {
                 }
                 if ($nSize > $ht->nTableSize) {
                     // Expanding packed hashtable
-                    $delta = $nSize - $ht->nTableSize;
+                    $priorSize = $ht->nTableSize;
                     $ht->nTableSize = static::zend_hash_check_size($nSize);
+                    $delta = $ht->nTableSize - $priorSize;
                     $ht->arData += \array_fill($ht->nTableSize, $delta, null);
                 }
             } else {
                 // Expanding regular hashtable
-                //FIXME 328
+                if ($ht->HASH_FLAG_PACKED) {
+                    throw new \Exception('Packed hashtable being extended as standard');
+                }
+                if ($nSize > $ht->nTableSize) {
+                    // Expanding regular hashtable that has already been initialized
+                    $nSize = static::zend_hash_check_size($nSize);
+                    $delta = $nSize - $ht->nTableSize;
+                    $ht->arData += \array_fill($ht->nTableSize, $delta, null);
+                    $ht->arHash += \array_fill($ht->nTableSize, $delta, HashTable::HT_INVALID_IDX);
+                    $ht->nTableSize = $nSize;
+                    static::zend_hash_rehash($ht);
+                }
             }
         }
-        //FIXME 312
     }
 
     /**
