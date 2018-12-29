@@ -35,7 +35,7 @@ class HashTraverse {
      * @return int
      */
     public static function zend_hash_has_more_elements_ex(HashTable $ht, int $pos): int {
-        return (static::zend_hash_get_current_key_type_ex($ht, $pos) == HashTable::HASH_KEY_NON_EXISTENT ?
+        return (HashTraverse::zend_hash_get_current_key_type_ex($ht, $pos) == HashTable::HASH_KEY_NON_EXISTENT ?
             ZendTypes::FAILURE : ZendTypes::SUCCESS);
     }
 
@@ -127,7 +127,7 @@ class HashTraverse {
      * @return int
      */
     public static function zend_hash_has_more_elements(HashTable $ht): int {
-        return static::zend_hash_has_more_elements_ex($ht, $ht->nInternalPointer);
+        return HashTraverse::zend_hash_has_more_elements_ex($ht, $ht->nInternalPointer);
     }
 
     /**
@@ -137,7 +137,7 @@ class HashTraverse {
      * @return int
      */
     public static function zend_hash_move_forward(HashTable $ht): int {
-        return static::zend_hash_move_forward_ex($ht, $ht->nInternalPointer);
+        return HashTraverse::zend_hash_move_forward_ex($ht, $ht->nInternalPointer);
     }
 
     /**
@@ -147,7 +147,7 @@ class HashTraverse {
      * @return int
      */
     public static function zend_hash_move_backwards(HashTable $ht): int {
-        return static::zend_hash_move_backwards_ex($ht, $ht->nInternalPointer);
+        return HashTraverse::zend_hash_move_backwards_ex($ht, $ht->nInternalPointer);
     }
 
     /**
@@ -159,7 +159,7 @@ class HashTraverse {
      * @return int
      */
     public static function zend_hash_get_current_key(HashTable $ht, ZendString $str_index, int $num_index): int {
-        return static::zend_hash_get_current_key_ex($ht, $str_index, $num_index, $ht->nInternalPointer);
+        return HashTraverse::zend_hash_get_current_key_ex($ht, $str_index, $num_index, $ht->nInternalPointer);
     }
 
     /**
@@ -169,7 +169,7 @@ class HashTraverse {
      * @param Zval $key
      */
     public static function zend_hash_get_current_key_zval(HashTable $ht, Zval $key): void {
-        static::zend_hash_get_current_key_zval_ex($ht, $key, $ht->nInternalPointer);
+        HashTraverse::zend_hash_get_current_key_zval_ex($ht, $key, $ht->nInternalPointer);
     }
 
     /**
@@ -179,7 +179,7 @@ class HashTraverse {
      * @return int
      */
     public static function zend_hash_get_current_key_type(HashTable $ht): int {
-        return static::zend_hash_get_current_key_type_ex($ht, $ht->nInternalPointer);
+        return HashTraverse::zend_hash_get_current_key_type_ex($ht, $ht->nInternalPointer);
     }
 
     /**
@@ -189,7 +189,7 @@ class HashTraverse {
      * @return Zval
      */
     public static function zend_hash_get_current_data(HashTable $ht): Zval {
-        return static::zend_hash_get_current_data_ex($ht, $ht->nInternalPointer);
+        return HashTraverse::zend_hash_get_current_data_ex($ht, $ht->nInternalPointer);
     }
 
     /**
@@ -198,7 +198,7 @@ class HashTraverse {
      * @param HashTable $ht
      */
     public static function zend_hash_internal_pointer_reset(HashTable $ht): void {
-        static::zend_hash_internal_pointer_reset_ex($ht, $ht->nInternalPointer);
+        HashTraverse::zend_hash_internal_pointer_reset_ex($ht, $ht->nInternalPointer);
     }
 
     /**
@@ -207,6 +207,6 @@ class HashTraverse {
      * @param HashTable $ht
      */
     public static function zend_hash_internal_pointer_end(HashTable $ht): void {
-        static::zend_hash_internal_pointer_end_ex($ht, $ht->nInternalPointer);
+        HashTraverse::zend_hash_internal_pointer_end_ex($ht, $ht->nInternalPointer);
     }
 }

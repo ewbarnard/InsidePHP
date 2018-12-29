@@ -90,8 +90,8 @@ class HashIterator {
      * @throws \Exception
      */
     private static function zend_hash_iterators_remove(HashTable $ht): void {
-        if (HashIterator::HT_HAS_ITERATORS($ht)) {
-            static::_zend_hash_iterators_remove($ht);
+        if (HashTable::HT_HAS_ITERATORS($ht)) {
+            HashIterator::_zend_hash_iterators_remove($ht);
         }
     }
 
@@ -150,7 +150,7 @@ class HashIterator {
      */
     public static function zend_hash_iterators_update(HashTable $ht, int $from, int $to): void {
         if (HashTable::HT_HAS_ITERATORS($ht)) {
-            static::_zend_hash_iterators_update($ht, $from, $to);
+            HashIterator::_zend_hash_iterators_update($ht, $from, $to);
         }
     }
 }

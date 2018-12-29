@@ -22,7 +22,7 @@ class ZvalStruct {
     public $u1_v_u_extra;
     /** @var int */
     public $u1_type_info;
-    /** @var int Hash collision chain */
+    /** @var int Hash collision chain as arData index */
     public $u2_next;
     /** @var int Cache slot (for RECV_INIT) */
     public $u2_cache_slot;

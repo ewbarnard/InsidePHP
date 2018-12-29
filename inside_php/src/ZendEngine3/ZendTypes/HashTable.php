@@ -3,6 +3,7 @@
 namespace App\ZendEngine3\ZendTypes;
 
 use App\ZendEngine3\Hash\HashResize;
+use function array_key_exists;
 
 /**
  * Class HashTable
@@ -52,6 +53,29 @@ class HashTable extends ZendArray {
     public $GC_TYPE_INFO = 0;
     public $GC_PERSISTENT = 0;
     public $GC_COLLECTABLE = 0;
+
+    /**
+     * @param int $slot
+     * @return int
+     * @throws \Exception
+     */
+    public function validateBucketSlot(int $slot): int {
+        if (($slot >= 0) && array_key_exists($slot, $this->arData)) {
+            return $slot;
+        }
+        throw new \Exception("Invalid bucket slot $slot");
+    }
+    /**
+     * @param int $slot
+     * @return int
+     * @throws \Exception
+     */
+    public function validateHashSlot(int $slot): int {
+        if (($slot < 0) && array_key_exists($slot, $this->arData)) {
+            return $slot;
+        }
+            throw new \Exception("Invalid hash slot $slot");
+    }
 
     /**
      * Zend/zend_hash.h line 45
@@ -109,7 +133,7 @@ class HashTable extends ZendArray {
      * @return bool
      */
     public static function HT_ITERATORS_OVERFLOW(HashTable $ht): bool {
-        return (static::HT_ITERATORS_COUNT($ht) === 0xff);
+        return (HashTable::HT_ITERATORS_COUNT($ht) === 0xff);
     }
 
     /**
@@ -119,7 +143,7 @@ class HashTable extends ZendArray {
      * @return bool
      */
     public static function HT_HAS_ITERATORS(HashTable $ht): bool {
-        return (static::HT_ITERATORS_COUNT($ht) !== 0);
+        return (HashTable::HT_ITERATORS_COUNT($ht) !== 0);
     }
 
     /**
@@ -138,7 +162,7 @@ class HashTable extends ZendArray {
      * @param HashTable $ht
      */
     public static function HT_INC_ITERATORS_COUNT(HashTable $ht): void {
-        static::HT_SET_ITERATORS_COUNT($ht, static::HT_ITERATORS_COUNT($ht) + 1);
+        HashTable::HT_SET_ITERATORS_COUNT($ht, HashTable::HT_ITERATORS_COUNT($ht) + 1);
     }
 
     /**
@@ -147,7 +171,7 @@ class HashTable extends ZendArray {
      * @param HashTable $ht
      */
     public static function HT_DEC_ITERATORS_COUNT(HashTable $ht): void {
-        static::HT_SET_ITERATORS_COUNT($ht, static::HT_ITERATORS_COUNT($ht) - 1);
+        HashTable::HT_SET_ITERATORS_COUNT($ht, HashTable::HT_ITERATORS_COUNT($ht) - 1);
     }
 
     /**
@@ -194,7 +218,7 @@ class HashTable extends ZendArray {
      * @throws \Exception
      */
     public static function ZEND_INIT_SYMTABLE(HashTable $ht): void {
-        static::ZEND_INIT_SYMTABLE_EX($ht, 8, 0);
+        HashTable::ZEND_INIT_SYMTABLE_EX($ht, 8, 0);
     }
 
     /**
@@ -206,8 +230,9 @@ class HashTable extends ZendArray {
      * @throws \Exception
      */
     public static function ZEND_INIT_SYMTABLE_EX(HashTable $ht, int $n, bool $persistent): void {
-        $dtor = function(){};
-        static::zend_hash_init($ht, $n, null, $dtor, $persistent);
+        $dtor = function () {
+        };
+        HashTable::zend_hash_init($ht, $n, null, $dtor, $persistent);
     }
 
     /**
@@ -227,7 +252,7 @@ class HashTable extends ZendArray {
      * @param int $idx
      * @return int
      */
-    public static function HT_ID_TO_HASH(int $idx): int {
+    public static function HT_IDX_TO_HASH(int $idx): int {
         return $idx;
     }
 
@@ -249,7 +274,7 @@ class HashTable extends ZendArray {
      * @return Bucket|null
      */
     public static function HT_HASH_EX(HashTable $ht, int $idx): ?Bucket {
-        return static::HT_HASH_TO_BUCKET_EX($ht, $idx);
+        return HashTable::HT_HASH_TO_BUCKET_EX($ht, $idx);
     }
 
     /**
@@ -260,7 +285,7 @@ class HashTable extends ZendArray {
      * @return Bucket|null
      */
     public static function HT_HASH(HashTable $ht, int $idx): ?Bucket {
-        return static::HT_HASH_EX($ht, $idx);
+        return HashTable::HT_HASH_EX($ht, $idx);
     }
 
     /**
@@ -302,7 +327,7 @@ class HashTable extends ZendArray {
      * @return int
      */
     public static function HT_SIZE_EX(int $nTableSize, int $nTableMask): int {
-        return (static::HT_DATA_SIZE($nTableSize) + static::HT_HASH_SIZE($nTableMask));
+        return (HashTable::HT_DATA_SIZE($nTableSize) + HashTable::HT_HASH_SIZE($nTableMask));
     }
 
     /**
@@ -312,7 +337,7 @@ class HashTable extends ZendArray {
      * @return int
      */
     public static function HT_SIZE(HashTable $ht): int {
-        return static::HT_SIZE_EX($ht->nNTableSize, $ht->nTableMask);
+        return HashTable::HT_SIZE_EX($ht->nNTableSize, $ht->nTableMask);
     }
 
     /**
@@ -322,7 +347,7 @@ class HashTable extends ZendArray {
      * @return int
      */
     public static function HT_USED_SIZE(HashTable $ht): int {
-        return (static::HT_HASH_SIZE($ht->nTableMask) + $ht->nNumUsed);
+        return (HashTable::HT_HASH_SIZE($ht->nTableMask) + $ht->nNumUsed);
     }
 
     /**
@@ -356,7 +381,7 @@ class HashTable extends ZendArray {
      * @return Bucket|null
      */
     public static function HT_HASH_TO_BUCKET(HashTable $ht, int $idx): ?Bucket {
-        return static::HT_HASH_TO_BUCKET_EX($ht, $idx);
+        return HashTable::HT_HASH_TO_BUCKET_EX($ht, $idx);
     }
 
     /**

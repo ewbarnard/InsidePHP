@@ -77,4 +77,75 @@ class HashDelete {
      */
     public static function zend_hash_del_bucket(HashTable $ht, Bucket $p): void {
     }
+
+    /**
+     * Zend/zend_hash.h line 439
+     *
+     * @param HashTable $ht
+     * @param ZendString $key
+     * @return int
+     */
+    public static function zend_symtable_del(HashTable $ht, ZendString $key): int {
+        $idx = null;
+
+        if (HashResize::ZEND_HANDLE_NUMERIC($key, $idx)) {
+            return HashDelete::zend_hash_index_del($ht, $idx);
+        } else {
+            return HashDelete::zend_hash_del($ht, $key);
+        }
+    }
+
+    /**
+     * Zend/zend_hash.h line 451
+     *
+     * @param HashTable $ht
+     * @param ZendString $key
+     * @return int
+     */
+    public static function zend_symtable_del_ind(HashTable $ht, ZendString $key): int {
+        $idx = null;
+
+        if (HashResize::ZEND_HANDLE_NUMERIC($key, $idx)) {
+            return HashDelete::zend_hash_index_del($ht, $idx);
+        } else {
+            return HashDelete::zend_hash_del_ind($ht, $key);
+        }
+    }
+
+    /**
+     * Zend/zend_hash.h line 535
+     *
+     * @param HashTable $ht
+     * @param string $str
+     * @param int $len
+     * @return int
+     */
+    public static function zend_symtable_str_del(HashTable $ht, string $str, int $len): int {
+        $idx = null;
+
+        if (HashResize::ZEND_HANDLE_NUMERIC_STR($str, $len, $idx)) {
+            return HashDelete::zend_hash_index_del($ht, $idx);
+        } else {
+            return HashDelete::zend_hash_str_del($ht, $str, $len);
+        }
+    }
+
+    /**
+     * Zend/zend_hash.h line 547
+     *
+     * @param HashTable $ht
+     * @param string $str
+     * @param int $len
+     * @return int
+     */
+    public static function zend_symtable_str_del_ind(HashTable $ht, string $str, int $len): int {
+        $idx = null;
+
+        if (HashResize::ZEND_HANDLE_NUMERIC_STR($str, $len, $idx)) {
+            return HashDelete::zend_hash_index_del($ht, $idx);
+        } else {
+            return HashDelete::zend_hash_str_del_ind($ht, $str, $len);
+        }
+    }
+
 }

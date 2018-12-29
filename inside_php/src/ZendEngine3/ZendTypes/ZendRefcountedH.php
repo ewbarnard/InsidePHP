@@ -15,4 +15,5 @@ class ZendRefcountedH {
 
     /** @var int */
     public $u_type_info;
+    public $IS_INTERNED = 0;
 }

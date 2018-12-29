@@ -2,6 +2,7 @@
 
 namespace App\ZendEngine3\Hash;
 
+use App\ZendEngine3\ZendTypes\Bucket;
 use App\ZendEngine3\Zval\Zval;
 
 class Lookup {
@@ -33,12 +34,12 @@ class Lookup {
         // Symbol table as hash table not supported
 
         if ($ht->HASH_FLAG_HAS_EMPTY_IND) {
-            $num = static::zend_array_recalc_elements($ht);
+            $num = Lookup::zend_array_recalc_elements($ht);
             if ($ht->nNumOfElements === $num) {
                 $ht->HASH_FLAG_HAS_EMPTY_IND = 0;
             }
         } else {
-            $num = static::zend_hash_num_elements($ht);
+            $num = Lookup::zend_hash_num_elements($ht);
         }
         return $num;
     }
@@ -80,7 +81,7 @@ class Lookup {
      * @return int
      */
     public static function zend_hash_get_current_pos(HashTable $ht): int {
-        return static::_zend_hash_get_current_pos($ht);
+        return Lookup::_zend_hash_get_current_pos($ht);
     }
 
     /**

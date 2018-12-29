@@ -24,6 +24,10 @@ class ZendString {
     /** @var string String value */
     public $val;
 
+    public static function ZSTR_IS_INTERNED(ZendString $key): int {
+        return $key->gc->IS_INTERNED;
+    }
+
     /**
      * Zend/zend_string.h line 52
      *
@@ -61,18 +65,22 @@ class ZendString {
      * @return int
      */
     public function ZSTR_HASH(ZendString $zstr): int {
-        return static::zend_string_hash_val($zstr);
+        return ZendString::zend_string_hash_val($zstr);
     }
 
     /**
      * Replaces hash function at Zend/zend_string.h line 359
      * zend_inline_hash_func
      *
+     * Zend/zend_hash.h line 1101 (_zend_hash_append_ex) implies that this function
+     * sets the hash inside the incoming zend_string.
+     *
      * @param ZendString $zstr
      * @return int
      */
-    public static function zend_string_hash_val(ZendString $zstr):int {
+    public static function zend_string_hash_val(ZendString $zstr): int {
         /* Hash value can't be zero, so we always set the high bit */
-        return (crc32($zstr->val) | 0x80000000);
+        $zstr->h = (crc32($zstr->val) | 0x80000000);
+        return $zstr->h;
     }
 }

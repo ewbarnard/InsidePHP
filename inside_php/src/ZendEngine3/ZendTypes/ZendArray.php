@@ -2,8 +2,6 @@
 
 namespace App\ZendEngine3\ZendTypes;
 
-use App\ZendEngine3\Hash\Bucket;
-
 /**
  * Class ZendArray
  *
@@ -22,7 +20,7 @@ class ZendArray {
     public $u_flags;
     /** @var int */
     public $nTableMask;
-    /** @var Bucket */
+    /** @var Bucket[]|mixed[] */
     public $arData;
     /** @var int */
     public $nNumUsed;

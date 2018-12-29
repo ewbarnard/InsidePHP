@@ -126,7 +126,7 @@ class HashCopy {
     public static function zend_hash_sort(HashTable $ht, callable $compare_func, bool $renumber): int {
         $zend_sort = function () {
         };
-        return static::zend_hash_sort_ex($ht, $zend_sort, $compare_func, $renumber);
+        return HashCopy::zend_hash_sort_ex($ht, $zend_sort, $compare_func, $renumber);
     }
 
     /**

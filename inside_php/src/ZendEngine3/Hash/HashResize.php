@@ -2,9 +2,9 @@
 
 namespace App\ZendEngine3\Hash;
 
+use App\ZendEngine3\ZendTypes\Bucket;
 use App\ZendEngine3\ZendTypes\HashTable;
 use App\ZendEngine3\ZendTypes\ZendString;
-use http\Exception\InvalidArgumentException;
 use function str_split;
 
 /**
@@ -90,7 +90,7 @@ final class HashResize {
     private static function zend_hash_real_init_packed_ex(HashTable $ht): void {
         $ht->HASH_FLAG_INITIALIZED = 1;
         $ht->HASH_FLAG_PACKED = 1;
-        static::HT_HASH_RESET_PACKED($ht);
+        HashTable::HT_HASH_RESET_PACKED($ht);
     }
 
     /**
@@ -121,7 +121,7 @@ final class HashResize {
         /* We can't simulate "persistent array" so treat it the same as a larger standard array */
         $ht->nTableMask = static::HT_SIZE_TO_MASK($nSize);
         $ht->HASH_FLAG_INITIALIZED = 1;
-        static::HT_HASH_RESET($ht);
+        HashTable::HT_HASH_RESET($ht);
     }
 
     /**
@@ -137,9 +137,9 @@ final class HashResize {
             throw new \Exception('HashTable already initialized');
         }
         if ($packed) {
-            static::zend_hash_real_init_packed_ex($ht);
+            HashResize::zend_hash_real_init_packed_ex($ht);
         } else {
-            static::zend_hash_real_init_mixed_ex($ht);
+            HashResize::zend_hash_real_init_mixed_ex($ht);
         }
     }
 
@@ -165,7 +165,7 @@ final class HashResize {
         }
         $ht->HASH_FLAG_STATIC_KEYS = 1;
         $ht->nTableMask = HashTable::HT_MIN_MASK;
-        static::setUninitializedBucket($ht);
+        HashResize::setUninitializedBucket($ht);
         $ht->nNumUsed = 0;
         $ht->nNumOfElements = 0;
         $ht->nInternalPointer = 0;
@@ -185,7 +185,7 @@ final class HashResize {
      * @throws \Exception
      */
     public static function _zend_hash_init(HashTable $ht, int $nSize, callable $pDestructor, bool $persistent): void {
-        static::_zend_hash_init_int($ht, $nSize, $pDestructor, $persistent);
+        HashResize::_zend_hash_init_int($ht, $nSize, $pDestructor, $persistent);
     }
 
     /**
@@ -196,7 +196,7 @@ final class HashResize {
      * @throws \Exception
      */
     public static function zend_new_array(int $size): HashTable {
-        return static::_zend_new_array($size);
+        return HashResize::_zend_new_array($size);
     }
 
     /**
@@ -209,7 +209,7 @@ final class HashResize {
      */
     public static function _zend_new_array_0(): HashTable {
         $ht = new HashTable();
-        static::_zend_hash_init_int($ht, HashTable::HT_MIN_SIZE, ZendVariables::ZVAL_PTR_DTOR, 0);
+        HashResize::_zend_hash_init_int($ht, HashTable::HT_MIN_SIZE, ZendVariables::ZVAL_PTR_DTOR, 0);
         return $ht;
     }
 
@@ -226,7 +226,7 @@ final class HashResize {
      */
     public static function _zend_new_array(int $nSize): HashTable {
         $ht = new HashTable();
-        static::_zend_hash_init_int($ht, $nSize, ZendVariables::ZVAL_PTR_DTOR, 0);
+        HashResize::_zend_hash_init_int($ht, $nSize, ZendVariables::ZVAL_PTR_DTOR, 0);
         return $ht;
     }
 
@@ -314,7 +314,7 @@ final class HashResize {
                 return 0;
             }
         }
-        return static::_zend_handle_numeric_str_ex($key, $length, $idx);
+        return HashResize::_zend_handle_numeric_str_ex($key, $length, $idx);
     }
 
     /**
@@ -325,7 +325,7 @@ final class HashResize {
      * @return int
      */
     public static function ZEND_HANDLE_NUMERIC(ZendString $key, int $idx): int {
-        return static::ZEND_HANDLE_NUMERIC_STR(ZendString::ZSTR_VAL($key), ZendString::ZSTR_LEN($key), $idx);
+        return HashResize::ZEND_HANDLE_NUMERIC_STR(ZendString::ZSTR_VAL($key), ZendString::ZSTR_LEN($key), $idx);
     }
 
     /**
@@ -337,7 +337,7 @@ final class HashResize {
      * @return int
      */
     public static function ZEND_HANDLE_NUMERIC_STR(string $key, int $length, int $idx): int {
-        return static::_zend_handle_numeric_str($key, $length, $idx);
+        return HashResize::_zend_handle_numeric_str($key, $length, $idx);
     }
 
     /**
@@ -351,7 +351,7 @@ final class HashResize {
         if ($ht->nTableSize >= HashTable::HT_MAX_SIZE) {
             throw new \Exception('Possible integer overflow in memory allocation');
         }
-        static::doubleTableSize($ht);
+        HashResize::doubleTableSize($ht);
     }
 
     /**
@@ -364,7 +364,7 @@ final class HashResize {
      * @throws \Exception
      */
     public static function zend_hash_real_init(HashTable $ht, bool $packed): void {
-        static::zend_hash_real_init_ex($ht, $packed);
+        HashResize::zend_hash_real_init_ex($ht, $packed);
     }
 
     /**
@@ -376,7 +376,7 @@ final class HashResize {
      * @param HashTable $ht
      */
     public static function zend_hash_real_init_packed(HashTable $ht): void {
-        static::zend_hash_real_init_packed_ex($ht);
+        HashResize::zend_hash_real_init_packed_ex($ht);
     }
 
     /**
@@ -387,7 +387,7 @@ final class HashResize {
      * @param HashTable $ht
      */
     public static function zend_hash_real_init_mixed(HashTable $ht): void {
-        static::zend_hash_real_init_mixed_ex($ht);
+        HashResize::zend_hash_real_init_mixed_ex($ht);
     }
 
     /**
@@ -402,7 +402,7 @@ final class HashResize {
     public static function zend_hash_packed_to_hash(HashTable $ht): void {
         $ht->HASH_FLAG_PACKED = 0;
         $ht->nTableMask = static::HT_SIZE_TO_MASK($ht->nTableSize);
-        static::zend_hash_rehash($ht);
+        HashResize::zend_hash_rehash($ht);
     }
 
     /**
@@ -438,7 +438,7 @@ final class HashResize {
             if ($nSize > $ht->nTableSize) {
                 $ht->nTableSize = static::zend_hash_check_size($nSize);
             }
-            static::zend_hash_real_init($ht, $packed);
+            HashResize::zend_hash_real_init($ht, $packed);
         } else {
             // Has been previously initialized
             if ($packed) {
@@ -448,7 +448,7 @@ final class HashResize {
                 if ($nSize > $ht->nTableSize) {
                     // Expanding packed hashtable
                     $priorSize = $ht->nTableSize;
-                    $ht->nTableSize = static::zend_hash_check_size($nSize);
+                    $ht->nTableSize = HashResize::zend_hash_check_size($nSize);
                     $delta = $ht->nTableSize - $priorSize;
                     $ht->arData += \array_fill($ht->nTableSize, $delta, null);
                 }
@@ -459,12 +459,12 @@ final class HashResize {
                 }
                 if ($nSize > $ht->nTableSize) {
                     // Expanding regular hashtable that has already been initialized
-                    $nSize = static::zend_hash_check_size($nSize);
+                    $nSize = HashResize::zend_hash_check_size($nSize);
                     $delta = $nSize - $ht->nTableSize;
                     $ht->arData += \array_fill($ht->nTableSize, $delta, null);
                     $ht->arHash += \array_fill($ht->nTableSize, $delta, HashTable::HT_INVALID_IDX);
                     $ht->nTableSize = $nSize;
-                    static::zend_hash_rehash($ht);
+                    HashResize::zend_hash_rehash($ht);
                 }
             }
         }
@@ -507,7 +507,7 @@ final class HashResize {
     private static function zend_hash_do_resize(HashTable $ht): void {
         /* Additional term is there to amortize the cost of compaction */
         if ($ht->nNumUsed > $ht->nNumOfElements + ($ht->nNumOfElements >> 5)) {
-            static::zend_hash_rehash($ht);
+            HashResize::zend_hash_rehash($ht);
         } elseif ($ht->nTableSize < HashTable::HT_MAX_SIZE) {
             self::doubleTableSize($ht);
             $ht->nTableMask = static::HT_SIZE_TO_MASK($ht->nTableSize);
@@ -545,7 +545,7 @@ final class HashResize {
         $bucketSlot = 0;
         /** @var Bucket $p */
         $p = $ht->arData[$bucketSlot];
-        if (static::HT_IS_WITHOUT_HOLES($ht)) {
+        if (HashResize::HT_IS_WITHOUT_HOLES($ht)) {
             do {
                 $nIndex = $p->h | $ht->nTableMask;
                 $p->val->next = $nIndex;
@@ -632,7 +632,7 @@ final class HashResize {
      */
     private static function ensureBucketInitialized(HashTable $ht, int $slot): Bucket {
         if ($ht->arData[$slot] === null) {
-            static::initializeBucket($ht, $slot);
+            HashResize::initializeBucket($ht, $slot);
         }
         return $ht->arData[$slot];
     }
