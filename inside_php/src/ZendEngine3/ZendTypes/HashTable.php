@@ -65,6 +65,7 @@ class HashTable extends ZendArray {
         }
         throw new \Exception("Invalid bucket slot $slot");
     }
+
     /**
      * @param int $slot
      * @return int
@@ -74,7 +75,26 @@ class HashTable extends ZendArray {
         if (($slot < 0) && array_key_exists($slot, $this->arData)) {
             return $slot;
         }
-            throw new \Exception("Invalid hash slot $slot");
+        throw new \Exception("Invalid hash slot $slot");
+    }
+
+    /**
+     * Zend/zend_hash.h line 45
+     *
+     * @param HashTable $ht
+     */
+    public static function HT_INVALIDATE(HashTable $ht): void {
+        $ht->HASH_FLAG_UNINITIALIZED = 1;
+    }
+
+    /**
+     * Zend/zend_hash.h line 49
+     *
+     * @param HashTable $ht
+     * @return bool
+     */
+    public static function HT_IS_INITIALIZED(HashTable $ht): bool {
+        return ($ht->HASH_FLAG_UNINITIALIZED === 0);
     }
 
     /**
