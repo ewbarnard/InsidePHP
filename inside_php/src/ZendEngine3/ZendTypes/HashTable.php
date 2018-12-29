@@ -44,7 +44,7 @@ class HashTable extends ZendArray {
 
     public $HASH_FLAG_CONSISTENCY = 0;
     public $HASH_FLAG_PACKED = 0;
-    public $HASH_FLAG_INITIALIZED = 0;
+    public $HASH_FLAG_UNINITIALIZED = 1;
     public $HASH_FLAG_STATIC_KEYS = 0; /* long and interned strings */
     public $HASH_FLAG_HAS_EMPTY_IND = 0;
     public $HASH_FLAG_ALLOW_COW_VIOLATION = 0;

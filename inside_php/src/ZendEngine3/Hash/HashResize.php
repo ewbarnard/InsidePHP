@@ -88,7 +88,7 @@ final class HashResize {
      * @param HashTable $ht
      */
     private static function zend_hash_real_init_packed_ex(HashTable $ht): void {
-        $ht->HASH_FLAG_INITIALIZED = 1;
+        $ht->HASH_FLAG_UNINITIALIZED = 1;
         $ht->HASH_FLAG_PACKED = 1;
         HashTable::HT_HASH_RESET_PACKED($ht);
     }
@@ -112,7 +112,7 @@ final class HashResize {
         $nSize = $ht->nTableSize;
         if ($nSize === HashTable::HT_MIN_SIZE) {
             $ht->nTableMask = static::HT_SIZE_TO_MASK(HashTable::HT_MIN_SIZE);
-            $ht->HASH_FLAG_INITIALIZED = 1;
+            $ht->HASH_FLAG_UNINITIALIZED = 1;
             $ht->arData = \array_fill(0, HashTable::HT_MIN_SIZE, null);
             $ht->arHash = \array_fill(0, HashTable::HT_MIN_SIZE, HashTable::HT_INVALID_IDX);
             return;
@@ -120,7 +120,7 @@ final class HashResize {
 
         /* We can't simulate "persistent array" so treat it the same as a larger standard array */
         $ht->nTableMask = static::HT_SIZE_TO_MASK($nSize);
-        $ht->HASH_FLAG_INITIALIZED = 1;
+        $ht->HASH_FLAG_UNINITIALIZED = 1;
         HashTable::HT_HASH_RESET($ht);
     }
 
@@ -133,7 +133,7 @@ final class HashResize {
      * @throws \Exception
      */
     private static function zend_hash_real_init_ex(HashTable $ht, int $packed): void {
-        if ($ht->HASH_FLAG_INITIALIZED) {
+        if ($ht->HASH_FLAG_UNINITIALIZED) {
             throw new \Exception('HashTable already initialized');
         }
         if ($packed) {
@@ -146,7 +146,7 @@ final class HashResize {
     /**
      * Zend/zend_hash.c line 213
      * Set up an empty array. There is no need to allocate space for the buckets and hash slots.
-     * HASH_FLAG_INITIALIZED remains zero, indicating that if we ever add any elements to this
+     * HASH_FLAG_UNINITIALIZED remains one, indicating that if we ever add any elements to this
      * array, we'll first need to allocate space for bucket/hash slots.
      *
      * @param HashTable $ht
@@ -433,7 +433,7 @@ final class HashResize {
         if ($nSize === 0) {
             return;
         }
-        if (!$ht->HASH_FLAG_INITIALIZED) {
+        if (!$ht->HASH_FLAG_UNINITIALIZED) {
             // Not yet initialized
             if ($nSize > $ht->nTableSize) {
                 $ht->nTableSize = static::zend_hash_check_size($nSize);
@@ -532,7 +532,7 @@ final class HashResize {
     public static function zend_hash_rehash(HashTable $ht): int {
         if ($ht->nNumOfElements === 0) {
             /* requesting empty array */
-            if ($ht->HASH_FLAG_INITIALIZED) {
+            if ($ht->HASH_FLAG_UNINITIALIZED) {
                 /* Only need to clear if initialized; uninitialized is already empty */
                 $ht->nNumUsed = 0;
                 static::HT_HASH_RESET($ht);
