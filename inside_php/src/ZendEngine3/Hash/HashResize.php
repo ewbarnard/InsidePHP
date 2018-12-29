@@ -3,7 +3,9 @@
 namespace App\ZendEngine3\Hash;
 
 use App\ZendEngine3\ZendTypes\HashTable;
+use App\ZendEngine3\ZendTypes\ZendString;
 use http\Exception\InvalidArgumentException;
+use function str_split;
 
 /**
  * Class HashResize
@@ -292,7 +294,51 @@ final class HashResize {
     public static function _zend_handle_numeric_str_ex(string $key, int $length, int $idx): int {
     }
 
-//FIXME zend_hash.h line 330
+    /**
+     * Zend/zend_hash.h line 330
+     *
+     * @param string $key
+     * @param int $length
+     * @param int $idx
+     * @return int
+     */
+    public static function _zend_handle_numeric_str(string $key, int $length, int $idx): int {
+        $tmp = str_split($key);
+        if ($tmp[0] > '9') {
+            return 0;
+        } elseif ($tmp[0] < '0') {
+            if ($tmp[0] !== '-') {
+                return 0;
+            }
+            if (($tmp[1] > '9') || ($tmp[1] < '0')) {
+                return 0;
+            }
+        }
+        return static::_zend_handle_numeric_str_ex($key, $length, $idx);
+    }
+
+    /**
+     * Zend/zend_hash.h line 351
+     *
+     * @param ZendString $key
+     * @param int $idx
+     * @return int
+     */
+    public static function ZEND_HANDLE_NUMERIC(ZendString $key, int $idx): int {
+        return static::ZEND_HANDLE_NUMERIC_STR(ZendString::ZSTR_VAL($key), ZendString::ZSTR_LEN($key), $idx);
+    }
+
+    /**
+     * Zend/zend_hash.h line 348
+     *
+     * @param string $key
+     * @param int $length
+     * @param int $idx
+     * @return int
+     */
+    public static function ZEND_HANDLE_NUMERIC_STR(string $key, int $length, int $idx): int {
+        return static::_zend_handle_numeric_str($key, $length, $idx);
+    }
 
     /**
      * Zend/zend_hash.c line 247

@@ -120,4 +120,17 @@ class HashFind {
         return (static::zend_hash_index_find($ht, $h) !== null);
     }
 
+    /**
+     * Zend/zend_hash.h line 355
+     *
+     * @param HashTable $ht
+     * @param ZendString $key
+     * @return Zval
+     * @throws \Exception
+     */
+    public static function zend_hash_find_ind(HashTable $ht, ZendString $key): Zval {
+        if ($ht || $key) {
+            throw new \Exception('Indirect not supported');
+        }
+    }
 }
