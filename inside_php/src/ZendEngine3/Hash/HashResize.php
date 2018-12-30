@@ -16,6 +16,7 @@ use function str_split;
  * @package App\ZendEngine3\Hash
  */
 class HashResize {
+    /** @codeCoverageIgnore */
     private function __construct() { // Static only
     }
 

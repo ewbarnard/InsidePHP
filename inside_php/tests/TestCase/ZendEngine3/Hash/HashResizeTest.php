@@ -8,6 +8,7 @@ use App\ZendEngine3\ZendTypes\ZendTypes;
 
 class HashResizeTest extends AbstractHashSetup {
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_check_size
      * @param int $nSize
      * @param int $expected
      * @dataProvider dataValidSizes
@@ -19,6 +20,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_check_size
      * @throws \Exception
      * @expectedException \Exception
      * @expectedExceptionMessage Possible integer overflow in memory allocation
@@ -27,6 +29,9 @@ class HashResizeTest extends AbstractHashSetup {
         HashResize::zend_hash_check_size(ZendTypes::HT_MAX_SIZE);
     }
 
+    /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_real_init_packed_ex
+     */
     public function testInitPackedInitialized(): void {
         static::assertSame(1, $this->ht->HASH_FLAG_UNINITIALIZED);
         static::assertSame(0, $this->ht->HASH_FLAG_PACKED);
@@ -38,6 +43,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_real_init_ex
      * @expectedException \Exception
      * @param int $packed
      * @throws \Exception
@@ -49,6 +55,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_real_init_ex
      * @throws \Exception
      */
     public function testInitPacked(): void {
@@ -58,6 +65,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_real_init_ex
      * @throws \Exception
      */
     public function testInitMixed(): void {
@@ -67,6 +75,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_real_init_ex
      * @throws \Exception
      */
     public function testInitMixedMedium(): void {
@@ -79,6 +88,7 @@ class HashResizeTest extends AbstractHashSetup {
 
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::_zend_hash_init_int
      * zend_hash.c 216 _zend_hash_init_int
      *
      * @dataProvider dataBit
@@ -96,6 +106,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::_zend_hash_init_int
      * zend_hash.c 217 _zend_hash_init_int
      *
      * @dataProvider dataBit
@@ -110,6 +121,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::_zend_hash_init_int
      * zend_hash.c 218 _zend_hash_init_int
      *
      * @dataProvider dataBit
@@ -124,6 +136,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::_zend_hash_init_int
      * zend_hash.c 219 _zend_hash_init_int
      *
      * @dataProvider dataBit
@@ -138,6 +151,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::_zend_hash_init_int
      * zend_hash.c 220-224 _zend_hash_init_int
      *
      * @dataProvider dataBit
@@ -156,6 +170,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::_zend_hash_init_int
      * zend_hash.c 213 _zend_hash_init_int
      *
      * @param int $nSize
@@ -170,6 +185,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::_zend_hash_init_int
      * zend_hash.c 228 _zend_hash_init
      *
      * @dataProvider dataBit
@@ -184,6 +200,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::_zend_new_array_0
      * zend_hash.c 233 _zend_new_array_0
      *
      * @throws \Exception
@@ -195,6 +212,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::_zend_new_array
      * zend_hash.c 240 _zend_new_array
      *
      * @param int $nSize
@@ -210,6 +228,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_packed_grow
      * @throws \Exception
      * @expectedException \Exception
      */
@@ -220,6 +239,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_packed_grow
      * zend_hash.c 247 zend_hash_packed_grow
      *
      * @throws \Exception
@@ -235,6 +255,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_real_init
      * 257 zend_hash_real_init
      *
      * @throws \Exception
@@ -249,6 +270,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_real_init_packed
      * 265 zend_hash_real_init_packed
      */
     public function test_zend_hash_real_init_packed() {
@@ -263,6 +285,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_real_init_mixed
      * 273 zend_hash_real_init_mixed
      *
      * @throws \Exception
@@ -276,6 +299,7 @@ class HashResizeTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashResize::zend_hash_packed_to_hash
      * 281 zend_hash_packed_to_hash
      *
      * @throws \Exception

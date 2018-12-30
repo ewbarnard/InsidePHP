@@ -379,12 +379,12 @@ class HashTable extends ZendArray {
     /**
      * Zend/zend_types.h line 333
      * Set all hash pointers to be invalid
+     * Leave hash buckets untouched
      *
      * @param HashTable $ht
      * @throws \Exception
      */
     public static function HT_HASH_RESET(HashTable $ht): void {
-        $ht->arData = [];
         $key = $ht->nTableMask;
         while ($key < $ht->nTableSize) {
             $ht->arData[$key] = ($key < 0) ? ZendTypes::HT_INVALID_IDX : null;

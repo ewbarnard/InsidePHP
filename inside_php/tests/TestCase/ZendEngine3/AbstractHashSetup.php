@@ -44,6 +44,26 @@ abstract class AbstractHashSetup extends TestCase {
             7 => [1, 'aaf', 'int', 111, 6],
         ],
     ];
+    public CONST MIXED_HOLES = [
+        'show' => [
+            'aab' => 'three',
+            'aac' => 'four',
+            0 => 105,
+            'aae' => 110,
+        ],
+        'hash' => [-1 => 4, -2 => 7],
+        'buckets' => [
+            // bucket slot => h, key, value-type, value, next
+            0 => [0, 'aaa', 'undef', 'one', null],
+            1 => [1, 1, 'undef', 'two', null],
+            2 => [1, 'aab', 'string', 'three', null],
+            3 => [1, 'aac', 'string', 'four', 2],
+            4 => [0, 0, 'int', 105, null],
+            5 => [1, 'aad', 'undef', 106, null],
+            6 => [1, 'aae', 'int', 110, 3],
+            7 => [1, 'aaf', 'undef', 111, null],
+        ],
+    ];
 
     /** @var HashTable */
     protected $ht;
@@ -54,6 +74,17 @@ abstract class AbstractHashSetup extends TestCase {
         $this->ht = new HashTable();
         $this->func = function () {
         };
+    }
+
+    public function dataEmpty() {
+        $data = [];
+
+        $data[] = [null, true];
+        $data[] = [0, true];
+        $data[] = [1, false];
+        $data[] = [8, false];
+
+        return $data;
     }
 
     public function dataBit() {
@@ -82,7 +113,6 @@ abstract class AbstractHashSetup extends TestCase {
     }
 
     public function show(): array {
-       // $trace = '';
         $result = [];
         foreach ($this->ht->arData as $key => $value) {
             if (($key < 0) || ($value === null)) {
@@ -90,16 +120,13 @@ abstract class AbstractHashSetup extends TestCase {
             }
             /** @var Bucket $bucket */
             $bucket = $value;
-            //$trace .= "key $key, value type: ". $bucket->val->u1_v_type.PHP_EOL;
             if ($bucket->val->u1_v_type !== ZendTypes::IS_UNDEF) {
                 $theKey = ($bucket->key === null) ? $bucket->h : $bucket->key;
                 $theValue = ($bucket->val->u1_v_type === ZendTypes::IS_STRING) ? $bucket->val->value->str :
                     $bucket->val->value->lval;
                 $result[$theKey] = $theValue;
-                //$trace .= " - $theKey => $theValue".PHP_EOL;
             }
         }
-        //$result['trace'] = $trace;
         return $result;
     }
 }

@@ -9,6 +9,7 @@ use App\ZendEngine3\ZendTypes\ZendTypes;
 
 class HashRehashTest extends AbstractHashSetup {
     /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::zend_hash_rehash
      * @throws \Exception
      */
     public function testUnitialized(): void {
@@ -21,6 +22,7 @@ class HashRehashTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::zend_hash_rehash
      * @throws \Exception
      */
     public function testPackedUndef() {
@@ -36,6 +38,7 @@ class HashRehashTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::zend_hash_rehash
      * @throws \Exception
      */
     public function testPackedNoHoles() {
@@ -52,6 +55,7 @@ class HashRehashTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::zend_hash_rehash
      * @throws \Exception
      */
     public function testPackedHoleAtEnd() {
@@ -72,6 +76,7 @@ class HashRehashTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::zend_hash_rehash
      * @throws \Exception
      */
     public function testMixedNoHoles(): void {
@@ -82,6 +87,24 @@ class HashRehashTest extends AbstractHashSetup {
         static::assertSame(ZendTypes::SUCCESS, $success);
         static::assertSame(8, $this->ht->nNumOfElements);
         static::assertSame(8, $this->ht->nNumUsed);
+        static::assertSame(0, $this->ht->HASH_FLAG_UNINITIALIZED);
+        $this->probeTable($profile, __FUNCTION__);
+
+    }
+
+    /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::zend_hash_rehash
+     * @throws \Exception
+     */
+    public function testMixedHoles(): void {
+        static::markTestSkipped(__FUNCTION__ . ' line ' . __LINE__ . ': Need refactor first');
+        $profile = $this->buildMixed(static::MIXED_HOLES);
+
+        $success = HashRehash::zend_hash_rehash($this->ht);
+
+        static::assertSame(ZendTypes::SUCCESS, $success);
+        static::assertSame(4, $this->ht->nNumOfElements);
+        static::assertSame(4, $this->ht->nNumUsed);
         static::assertSame(0, $this->ht->HASH_FLAG_UNINITIALIZED);
         $this->probeTable($profile, __FUNCTION__);
 
@@ -242,18 +265,51 @@ class HashRehashTest extends AbstractHashSetup {
         $return['show'] = $show;
         return $return;
     }
-    /*
-	 * -x uninitialized
-	 * -x packed undef
-     * -x packed no holes
-     * -x packed with hole at end
-     * - packed with hole at begin
-     * - packed with holes
-     *
-	 * - just-unpacked (mixed no holes no collisions)
-     *
-	 * - mixed no collisions holes
-	 * - mixed collisions no holes
-	 * - mixed collisions holes
-	 */
+
+    /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::isEmptyArray
+     * @param int $nNumOfElements
+     * @param bool $expected
+     * @dataProvider dataEmpty
+     */
+    public function testIsEmpty(?int $nNumOfElements, bool $expected): void {
+        $this->ht->nNumOfElements = $nNumOfElements;
+
+        $actual = HashRehash::isEmptyArray($this->ht);
+
+        static::assertSame($expected, $actual);
+    }
+
+    /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::clearEmptyArray
+     * @throws \Exception
+     */
+    public function testClearEmptyNotInitialized(): void {
+        $success = HashRehash::clearEmptyArray($this->ht);
+
+        static::assertSame(ZendTypes::SUCCESS, $success);
+        static::assertSame(0, count($this->ht->arData));
+    }
+
+    /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::clearEmptyArray
+     * @throws \Exception
+     */
+    public function testClearEmptyInitialized(): void {
+        $this->ht->HASH_FLAG_UNINITIALIZED = 0;
+
+        $success = HashRehash::clearEmptyArray($this->ht);
+
+        static::assertSame(ZendTypes::SUCCESS, $success);
+        static::assertSame(16, count($this->ht->arData));
+    }
+
+    /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::clearPackedArray
+     */
+    public function testClearPackedArray(): void {
+        $success = HashRehash::clearPackedArray($this->ht);
+
+        static::assertSame(ZendTypes::SUCCESS, $success);
+    }
 }

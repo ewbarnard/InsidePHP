@@ -13,12 +13,13 @@ use App\ZendEngine3\ZendTypes\HashTable;
 use App\ZendEngine3\ZendTypes\ZendTypes;
 
 class HashRehash {
+    /** @codeCoverageIgnore */
     private function __construct() { // Static only
     }
 
     /**
      * Extern Zend/zend_hash.h line 277
-     * Zend/zend_hash.c line 1137
+     * Zend/zend_hash.c line 1141
      *
      * Compress bucket slots to remove inactive buckets.
      * "Next" pointers on collision chain always point to lower-numbered slots.
@@ -30,19 +31,13 @@ class HashRehash {
      * @throws \Exception
      */
     public static function zend_hash_rehash(HashTable $ht): int {
-        if ($ht->nNumOfElements === 0) {
-            /* requesting empty array */
-            if (!$ht->HASH_FLAG_UNINITIALIZED) {
-                /* Only need to clear if initialized; uninitialized is already empty */
-                $ht->nNumUsed = 0;
-                HashTable::HT_HASH_RESET($ht);
-            }
-            return ZendTypes::SUCCESS;
+        if (HashRehash::isEmptyArray($ht)) {
+            return HashRehash::clearEmptyArray($ht);
         }
-        if ($ht->HASH_FLAG_PACKED) {
-            return ZendTypes::SUCCESS;
+        if (HashTable::HT_IS_PACKED($ht)) {
+            return HashRehash::clearPackedArray($ht);
         }
-        return ZendTypes::SUCCESS;//FIXME
+        return ZendTypes::SUCCESS;
 
         HashTable::HT_HASH_RESET($ht);
         $i = 0;
@@ -96,6 +91,49 @@ class HashRehash {
                 $p = $ht->arData[++$bucketSlot];
             } while (++$i < $ht->nNumUsed);
         }
+        return ZendTypes::SUCCESS;
+    }
+
+    /**
+     * Special-case empty array - nothing to rehash
+     *
+     * @param HashTable $ht
+     * @return bool
+     */
+    public static function isEmptyArray(HashTable $ht): bool {
+        return (($ht->nNumOfElements === 0) || ($ht->nNumOfElements === null));
+    }
+
+    /**
+     * When the array is empty, only need to clear if it has been initialized.
+     * An unitialized array is already set to empty.
+     *
+     * @param HashTable $ht
+     * @return int
+     * @throws \Exception
+     */
+    public static function clearEmptyArray(HashTable $ht): int {
+        if (HashTable::HT_IS_INITIALIZED($ht)) {
+            $ht->nNumUsed = 0;
+            HashTable::HT_HASH_RESET($ht);
+        }
+        return ZendTypes::SUCCESS;
+    }
+
+    /**
+     * A packed array cannot be compacted - the bucket slot already corresponds
+     * to the lookup key; that is the definition of packed. A sparse packed array
+     * must remain sparse
+     *
+     * @param HashTable $ht
+     * @return int
+     */
+    public static function clearPackedArray(HashTable $ht): int {
+        if (0 && $ht) { // dummy
+            // @codeCoverageIgnoreStart
+            return ZendTypes::SUCCESS;
+        }
+        // @codeCoverageIgnoreEnd
         return ZendTypes::SUCCESS;
     }
 

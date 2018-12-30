@@ -6,7 +6,9 @@ use App\ZendEngine3\AbstractHashSetup;
 use App\ZendEngine3\Hash\HashResize;
 
 class HashTableTest extends AbstractHashSetup {
-
+    /**
+     * @covers \App\ZendEngine3\ZendTypes\HashTable::HT_HASH_RESET
+     */
     public function testResetPacked() {
         HashTable::HT_HASH_RESET_PACKED($this->ht);
 
@@ -14,6 +16,7 @@ class HashTableTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\ZendTypes\HashTable::HT_HASH_RESET
      * @throws \Exception
      */
     public function testResetMin() {
@@ -26,6 +29,7 @@ class HashTableTest extends AbstractHashSetup {
     }
 
     /**
+     * @covers \App\ZendEngine3\ZendTypes\HashTable::HT_HASH_RESET
      * @throws \Exception
      */
     public function testResetMedium() {
