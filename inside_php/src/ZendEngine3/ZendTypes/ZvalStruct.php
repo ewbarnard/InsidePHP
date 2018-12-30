@@ -10,7 +10,7 @@ namespace App\ZendEngine3\ZendTypes;
  * Zend/zend_types.h line 182
  */
 class ZvalStruct {
-    /** @var \App\ZendEngine3\ZendTypes\ZendValue Value */
+    /** @var ZendValue Value */
     public $value;
     /** @var int Active type */
     public $u1_v_type;

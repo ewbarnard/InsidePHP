@@ -12,6 +12,7 @@ class Zval extends ZvalStruct {
 
     public function __construct() {
         $this->u1_v_type = ZendTypes::IS_UNDEF;
+        $this->value = new ZendValue();
     }
 
     public static function COPY_VALUE(Zval $destination, Zval $source): void {

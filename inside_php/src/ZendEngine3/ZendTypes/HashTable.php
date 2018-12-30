@@ -49,10 +49,13 @@ class HashTable extends ZendArray {
     public $HASH_FLAG_HAS_EMPTY_IND = 0;
     public $HASH_FLAG_ALLOW_COW_VIOLATION = 0;
 
-    public $IS_ARRAY_PERSISTENT = 0;
-    public $GC_TYPE_INFO = 0;
-    public $GC_PERSISTENT = 0;
-    public $GC_COLLECTABLE = 0;
+    public function __construct() {
+        parent::__construct();
+        $this->nTableSize = ZendTypes::HT_MIN_SIZE;
+        $this->nTableMask = HashTable::HT_SIZE_TO_MASK($this->nTableSize);
+        $this->nNumUsed = 0;
+        $this->nNumOfElements = 0;
+    }
 
     /**
      * @param int $slot
@@ -60,7 +63,7 @@ class HashTable extends ZendArray {
      * @throws \Exception
      */
     public function validateBucketSlot(int $slot): int {
-        if (($slot >= 0) && array_key_exists($slot, $this->arData)) {
+        if (($slot >= 0) && array_key_exists($slot, $this->arData) && ($slot < $this->nTableSize)) {
             return $slot;
         }
         throw new \Exception("Invalid bucket slot $slot");
@@ -72,7 +75,7 @@ class HashTable extends ZendArray {
      * @throws \Exception
      */
     public function validateHashSlot(int $slot): int {
-        if (($slot < 0) && array_key_exists($slot, $this->arData)) {
+        if (($slot < 0) && array_key_exists($slot, $this->arData) && ($slot >= $this->nTableMask)) {
             return $slot;
         }
         throw new \Exception("Invalid hash slot $slot");
@@ -273,7 +276,8 @@ class HashTable extends ZendArray {
      * @return int
      */
     public static function HT_IDX_TO_HASH(int $idx): int {
-        return $idx;
+        return -($idx + 1);
+        //return $idx;
     }
 
     /**
@@ -283,7 +287,8 @@ class HashTable extends ZendArray {
      * @return int
      */
     public static function HT_HASH_TO_IDX(int $idx): int {
-        return $idx;
+        return (-$idx) - 1;
+        //return $idx;
     }
 
     /**
@@ -315,7 +320,8 @@ class HashTable extends ZendArray {
      * @return int
      */
     public static function HT_SIZE_TO_MASK(int $nTableSize): int {
-        return (-($nTableSize + $nTableSize));
+        return -$nTableSize;
+        //return (-($nTableSize + $nTableSize));
     }
 
     /**
@@ -375,11 +381,14 @@ class HashTable extends ZendArray {
      * Set all hash pointers to be invalid
      *
      * @param HashTable $ht
+     * @throws \Exception
      */
     public static function HT_HASH_RESET(HashTable $ht): void {
-        $slot = $ht->nTableMask;
-        while ($slot < 0) {
-            $ht->arData[$slot++] = ZendTypes::HT_INVALID_IDX;
+        $ht->arData = [];
+        $key = $ht->nTableMask;
+        while ($key < $ht->nTableSize) {
+            $ht->arData[$key] = ($key < 0) ? ZendTypes::HT_INVALID_IDX : null;
+            $key++;
         }
     }
 
@@ -389,8 +398,8 @@ class HashTable extends ZendArray {
      * @param HashTable $ht
      */
     public static function HT_HASH_RESET_PACKED(HashTable $ht): void {
-        $ht->arData[-2] = ZendTypes::HT_INVALID_IDX;
-        $ht->arData[-1] = ZendTypes::HT_INVALID_IDX;
+        $ht->arData = [-2 => ZendTypes::HT_INVALID_IDX, -1 => ZendTypes::HT_INVALID_IDX];
+        $ht->HASH_FLAG_UNINITIALIZED = 1;
     }
 
     /**

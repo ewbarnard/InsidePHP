@@ -22,16 +22,21 @@ class ZendArray {
     public $nTableMask;
     /** @var Bucket[]|mixed[] */
     public $arData;
-    /** @var int */
+    /** @var int Number of next available slot */
     public $nNumUsed;
-    /** @var int */
+    /** @var int Number of valid elements */
     public $nNumOfElements;
     /** @var int */
-    public $nNTableSize;
+    public $nTableSize;
     /** @var int */
     public $nInternalPointer;
     /** @var int */
     public $nNextFreeElement;
     /** @var callable */
     public $pDestructor;
+
+    public function __construct() {
+        $this->gc = new ZendRefcountedH();
+        $this->arData = [];
+    }
 }
