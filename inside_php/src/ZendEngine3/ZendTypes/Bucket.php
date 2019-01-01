@@ -24,6 +24,9 @@ class Bucket {
 
     /** @var ZendString The array element's key, when the key is a string (null for integer keys) */
     public $key;
+
+    /** @var int The array element's key, when the key is an int (needed for this implementation) */
+    public $intKey;
     /**
      * @var int Since we cannot allocate buckets as a continuous block of memory in PHP, we need to
      * record which arData slot this bucket resides in.
@@ -42,20 +45,20 @@ class Bucket {
         return ($this->key === null) ? $this->h : $this->key;
     }
 
-    public function next(): ?Bucket {
+/*    public function next(): ?Bucket {
         return $this->val ? $this->val->u2_next : null;
-    }
+    }*/
 
-    public function setNext(int $value): void {
+/*    public function setNext(int $value): void {
         if ($this->val) {
             $this->val->setNext($value);
         }
-    }
+    }*/
 
-    public function unset(): void {
+/*    public function unset(): void {
         if ($this->val) {
             $this->val->invalidate();
         }
-    }
+    }*/
 
 }

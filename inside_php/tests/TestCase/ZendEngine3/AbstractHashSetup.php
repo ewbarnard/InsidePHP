@@ -4,6 +4,7 @@ namespace App\ZendEngine3;
 
 use App\ZendEngine3\ZendTypes\Bucket;
 use App\ZendEngine3\ZendTypes\HashTable;
+use App\ZendEngine3\ZendTypes\ZendString;
 use App\ZendEngine3\ZendTypes\ZendTypes;
 use const PHP_EOL;
 use PHPUnit\Framework\TestCase;
@@ -69,8 +70,10 @@ abstract class AbstractHashSetup extends TestCase {
     protected $ht;
     /** @var callable */
     protected $func;
+    protected $trace = PHP_EOL;
 
     public function setUp() {
+        $this->trace = PHP_EOL;
         $this->ht = new HashTable();
         $this->func = function () {
         };
@@ -112,6 +115,88 @@ abstract class AbstractHashSetup extends TestCase {
         return $data;
     }
 
+    /**
+     * @param string|int $key
+     * @return mixed
+     * @throws \Exception
+     */
+    public function find($key) {
+        $this->trace(__FUNCTION__ . "($key)");
+        if (HashTable::HT_IS_PACKED($this->ht)) {
+            return $this->bucketValue($key);
+        }
+        $keyIsInt = ($key === (int)$key);
+        $h = $keyIsInt ? ZendString::fakeIntHash($key) : ZendString::fakeHash($key);
+        $bucketSlot = $this->bucketSlot($h);
+        $this->trace(" - find($key) h $h, bucketSlot $bucketSlot");
+        if (($bucketSlot === null) || ($bucketSlot === ZendTypes::HT_INVALID_IDX)) {
+            $this->trace(" - Hash slot is empty, returning null");
+            return null;
+        }
+        $this->ht->validateBucketSlot($bucketSlot);
+        /** @var Bucket $bucket */
+        $bucket = $this->ht->arData[$bucketSlot];
+        $this->traceBucket($bucket);
+        while (($bucket->h !== $h) && ($bucket->val->u2_next !== null) && ($bucket->val->u2_next >= 0)) {
+            $bucketSlot = $bucket->val->u2_next;
+            $bucket = $this->ht->arData[$bucketSlot];
+            $this->traceBucket($bucket);
+        }
+        $return = null;
+        $found = $keyIsInt ? ($key === $bucket->intKey) : ($key === $bucket->key);
+        if ($found) {
+            $return = $this->bucketValue($bucketSlot);
+            $this->trace(" - Matching h, returning $return");
+        } else {
+            $this->trace(" - Not found, returning null");
+        }
+        return $return;
+    }
+
+    protected function traceBucket(Bucket $bucket): void {
+        $this->trace(" - traceBucket: bucketSlot {$bucket->bucketSlot}, h {$bucket->h}, key {$bucket->key}, intKey {$bucket->intKey}, bucket next {$bucket->val->u2_next}");
+    }
+
+    protected function trace(string $message): void {
+        $this->trace .= $message . PHP_EOL;
+    }
+
+    /**
+     * @param $key
+     * @return ZendString|int
+     * @throws \Exception
+     */
+    private function bucketValue($key) {
+        $this->ht->validateBucketSlot($key);
+        /** @var Bucket $bucket */
+        $bucket = $this->ht->arData[$key];
+        $int = $bucket->val->value->lval;
+        if ($int !== null) {
+            $this->trace(" - bucketValue($key) returning int $int");
+            return $int;
+        }
+        $this->trace(" - bucketValue($key) returning string " . $bucket->val->value->str->val);
+        return $bucket->val->value->str->val;
+    }
+
+    /**
+     * @param int $h
+     * @return int|null
+     * @throws \Exception
+     */
+    public function bucketSlot($h): ?int {
+        $hashSlot = $h | $this->ht->nTableMask;
+        $this->trace(" - bucketSlot($h) hashSlot $hashSlot");
+        $this->ht->validateHashSlot($hashSlot);
+        $bucketSlot = (int)$this->ht->arData[$hashSlot];
+        $this->trace(" - bucketSlot($h) bucketSlot $bucketSlot");
+        if ($bucketSlot === ZendTypes::HT_INVALID_IDX) {
+            return null;
+        }
+        $this->ht->validateBucketSlot($bucketSlot);
+        return $bucketSlot;
+    }
+
     public function show(): array {
         $result = [];
         foreach ($this->ht->arData as $key => $value) {
@@ -122,7 +207,7 @@ abstract class AbstractHashSetup extends TestCase {
             $bucket = $value;
             if ($bucket->val->u1_v_type !== ZendTypes::IS_UNDEF) {
                 $theKey = ($bucket->key === null) ? $bucket->h : $bucket->key;
-                $theValue = ($bucket->val->u1_v_type === ZendTypes::IS_STRING) ? $bucket->val->value->str :
+                $theValue = ($bucket->val->u1_v_type === ZendTypes::IS_STRING) ? $bucket->val->value->str->val :
                     $bucket->val->value->lval;
                 $result[$theKey] = $theValue;
             }

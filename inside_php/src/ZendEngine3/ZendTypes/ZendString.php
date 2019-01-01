@@ -2,8 +2,6 @@
 
 namespace App\ZendEngine3\ZendTypes;
 
-use function crc32;
-
 /**
  * Class ZendString
  *
@@ -80,7 +78,17 @@ class ZendString {
      */
     public static function zend_string_hash_val(ZendString $zstr): int {
         /* Hash value can't be zero, so we always set the high bit */
-        $zstr->h = (crc32($zstr->val) | 0x80000000);
+        $zstr->h = ZendString::fakeHash($zstr->val);
         return $zstr->h;
+    }
+
+    public static function fakeHash(string $key): int {
+        /* Hash value can't be zero, so we always set the high bit */
+        $hash = \crc32($key);
+        return ($hash < 0) ? $hash : -$hash;
+    }
+
+    public static function fakeIntHash(int $key): int {
+        return -abs($key);
     }
 }

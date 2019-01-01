@@ -41,4 +41,8 @@ class ZendValue {
     public $ww_w1;
     /** @var int */
     public $ww_w2;
+
+    public function __construct() {
+        $this->str = new ZendString();
+    }
 }

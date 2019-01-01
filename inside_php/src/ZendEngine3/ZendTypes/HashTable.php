@@ -55,6 +55,7 @@ class HashTable extends ZendArray {
         $this->nTableMask = HashTable::HT_SIZE_TO_MASK($this->nTableSize);
         $this->nNumUsed = 0;
         $this->nNumOfElements = 0;
+        $this->u_v_nIteratorsCount = 0;
     }
 
     /**
@@ -63,6 +64,7 @@ class HashTable extends ZendArray {
      * @throws \Exception
      */
     public function validateBucketSlot(int $slot): int {
+        $this->progress(__FUNCTION__."($slot)");
         if (($slot >= 0) && array_key_exists($slot, $this->arData) && ($slot < $this->nTableSize)) {
             return $slot;
         }
@@ -75,6 +77,7 @@ class HashTable extends ZendArray {
      * @throws \Exception
      */
     public function validateHashSlot(int $slot): int {
+        $this->progress(__FUNCTION__ . "($slot)");
         if (($slot < 0) && array_key_exists($slot, $this->arData) && ($slot >= $this->nTableMask)) {
             return $slot;
         }
@@ -386,9 +389,15 @@ class HashTable extends ZendArray {
      */
     public static function HT_HASH_RESET(HashTable $ht): void {
         $key = $ht->nTableMask;
+        while ($key < 0) {
+            $ht->arData[$key++] = ZendTypes::HT_INVALID_IDX;
+        }
+    }
+
+    public static function htBucketReset(HashTable $ht): void {
+        $key = 0;
         while ($key < $ht->nTableSize) {
-            $ht->arData[$key] = ($key < 0) ? ZendTypes::HT_INVALID_IDX : null;
-            $key++;
+            $ht->arData[$key++] = null;
         }
     }
 

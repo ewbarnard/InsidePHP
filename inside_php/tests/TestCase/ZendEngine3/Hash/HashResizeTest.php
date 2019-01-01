@@ -305,7 +305,6 @@ class HashResizeTest extends AbstractHashSetup {
      * @throws \Exception
      */
     public function test_zend_hash_packed_to_hash() {
-        static::markTestSkipped(__FUNCTION__ . ' line ' . __LINE__ . ': Need zend_hash_rehash');
         HashResize::zend_hash_real_init_packed_ex($this->ht);
         static::assertSame(static::UNDEF, $this->ht->arData);
         static::assertSame(0, $this->ht->HASH_FLAG_UNINITIALIZED);

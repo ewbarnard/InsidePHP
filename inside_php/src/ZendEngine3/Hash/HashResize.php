@@ -114,6 +114,7 @@ class HashResize {
         $ht->HASH_FLAG_UNINITIALIZED = 0;
         $ht->HASH_FLAG_PACKED = 0;
         HashTable::HT_HASH_RESET($ht);
+        HashTable::htBucketReset($ht);
     }
 
     /**
@@ -394,7 +395,16 @@ class HashResize {
     public static function zend_hash_packed_to_hash(HashTable $ht): void {
         $ht->HASH_FLAG_PACKED = 0;
         $ht->nTableMask = HashTable::HT_SIZE_TO_MASK($ht->nTableSize);
-        HashResize::zend_hash_rehash($ht);
+        HashTable::HT_HASH_RESET($ht);
+        $slot = 0;
+        while ($slot < $ht->nTableSize) {
+            if (!\array_key_exists($slot, $ht->arData)) {
+                $ht->arData[$slot] = null;
+            }
+            ++$slot;
+        }
+        ksort($ht->arData, SORT_NUMERIC);
+        HashRehash::zend_hash_rehash($ht);
     }
 
     /**

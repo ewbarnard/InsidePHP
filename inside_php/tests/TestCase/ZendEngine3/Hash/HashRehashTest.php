@@ -5,6 +5,7 @@ namespace App\ZendEngine3\Hash;
 use App\ZendEngine3\AbstractHashSetup;
 use App\ZendEngine3\ZendTypes\Bucket;
 use App\ZendEngine3\ZendTypes\HashTable;
+use App\ZendEngine3\ZendTypes\ZendString;
 use App\ZendEngine3\ZendTypes\ZendTypes;
 
 class HashRehashTest extends AbstractHashSetup {
@@ -55,6 +56,90 @@ class HashRehashTest extends AbstractHashSetup {
     }
 
     /**
+     * @param int $nValues
+     * @return array
+     * @throws \Exception
+     */
+    public function buildPacked(int $nValues): array {
+        $show = [];
+        $return = ['n' => $nValues, 'hash' => [], 'buckets' => []];
+        $nValues = HashResize::zend_hash_check_size($nValues);
+        $this->ht->nTableSize = $nValues;
+        $this->ht->nTableMask = HashTable::HT_SIZE_TO_MASK($nValues);
+        $this->ht->nNumOfElements = $nValues;
+        $this->ht->nNumUsed = $nValues;
+        $this->ht->HASH_FLAG_UNINITIALIZED = 0;
+        $this->ht->HASH_FLAG_PACKED = 1;
+        $this->ht->arData = [];
+        $slot = $this->ht->nTableMask;
+        while ($slot < 0) {
+            $this->ht->arData[$slot] = ZendTypes::HT_INVALID_IDX;
+            $return['hash'][$slot] = ZendTypes::HT_INVALID_IDX;
+            $slot++;
+        }
+        $value = 'zz';
+        while ($slot < $nValues) {
+            $bucket = new Bucket($slot);
+            $bucket->val->value->str->val = ++$value;
+            $bucket->val->u1_v_type = ZendTypes::IS_STRING;
+            $bucket->val->u2_next = null;
+            $bucket->h = $slot;
+            $this->ht->arData[$slot] = $bucket;
+            $return['buckets'][$slot] =
+                [
+                    'value' => $value,
+                    'field' => 'str',
+                    'type' => ZendTypes::IS_STRING,
+                    'h' => $slot,
+                    'next' => null,
+                ];
+            $show[$slot] = $value;
+            $slot++;
+        }
+        $return['show'] = $show;
+        return $return;
+    }
+
+    /**
+     * @param array $profile
+     * @param string $caller
+     * @throws \Exception
+     */
+    public function probeTable(array $profile, string $caller): void {
+        $this->probeShow($profile, $caller);
+        $n = $profile['n'];
+        $hashSlots = [];
+        $bucketSlots = [];
+        foreach ($this->ht->arData as $key => $value) {
+            if ($key < 0) {
+                $this->ht->validateHashSlot($key);
+                $hashSlots[$key] = $value;
+            } else {
+                $this->ht->validateBucketSlot($key);
+                $bucketSlots[$key] = $value;
+            }
+        }
+        static::assertSame($n, count($hashSlots), $caller);
+        static::assertSame($n, count($bucketSlots), $caller);
+        static::assertSame(count($profile['buckets']), count($bucketSlots));
+    }
+
+    /**
+     * @param array $profile
+     * @param string $caller
+     * @throws \Exception
+     */
+    private function probeShow(array $profile, string $caller): void {
+        $show = $this->show();
+        static::assertSame($profile['show'], $show, $caller . $this->trace . print_r($this->ht, true));
+        foreach ($show as $key => $value) {
+            $expected = $this->find($key);
+            static::assertSame($expected, $value,
+                "$caller: key $key, expected $expected, value $value: " . $this->trace . print_r($this->ht, true));
+        }
+    }
+
+    /**
      * @covers \App\ZendEngine3\Hash\HashRehash::zend_hash_rehash
      * @throws \Exception
      */
@@ -77,10 +162,13 @@ class HashRehashTest extends AbstractHashSetup {
 
     /**
      * @covers \App\ZendEngine3\Hash\HashRehash::zend_hash_rehash
+     * @covers \App\ZendEngine3\Hash\HashRehash::rehashNoHoles
+     * @covers \App\ZendEngine3\Hash\HashRehash::rehashBucketSlot
      * @throws \Exception
      */
     public function testMixedNoHoles(): void {
-        $profile = $this->buildMixed(static::MIXED_MIN);
+        $input = $this->hashMixed(static::MIXED_MIN);
+        $profile = $this->buildMixed($input);
 
         $success = HashRehash::zend_hash_rehash($this->ht);
 
@@ -92,59 +180,22 @@ class HashRehashTest extends AbstractHashSetup {
 
     }
 
-    /**
-     * @covers \App\ZendEngine3\Hash\HashRehash::zend_hash_rehash
-     * @throws \Exception
-     */
-    public function testMixedHoles(): void {
-        static::markTestSkipped(__FUNCTION__ . ' line ' . __LINE__ . ': Need refactor first');
-        $profile = $this->buildMixed(static::MIXED_HOLES);
-
-        $success = HashRehash::zend_hash_rehash($this->ht);
-
-        static::assertSame(ZendTypes::SUCCESS, $success);
-        static::assertSame(4, $this->ht->nNumOfElements);
-        static::assertSame(4, $this->ht->nNumUsed);
-        static::assertSame(0, $this->ht->HASH_FLAG_UNINITIALIZED);
-        $this->probeTable($profile, __FUNCTION__);
-
-    }
-
-    /**
-     * @param array $profile
-     * @param string $caller
-     * @throws \Exception
-     */
-    public function probeTable(array $profile, string $caller): void {
-        static::assertSame($profile['show'], $this->show(), $caller . print_r($this->ht, true));
-        $n = $profile['n'];
-        $hashSlots = [];
-        $bucketSlots = [];
-        foreach ($this->ht->arData as $key => $value) {
-            if ($key < 0) {
-                $this->ht->validateHashSlot($key);
-                $hashSlots[$key] = $value;
-            } else {
-                $this->ht->validateBucketSlot($key);
-                $bucketSlots[$key] = $value;
-            }
+    public function hashMixed(array $input): array {
+        $hash = [];
+        $buckets = [];
+        $mask = HashTable::HT_SIZE_TO_MASK(count($input['buckets']));
+        foreach ($input['buckets'] as $bucketSlot => $row) {
+            list(, $key, $valueType, $value, $next) = $row;
+            $h = ($key === (int)$key) ? ZendString::fakeIntHash($key) : ZendString::fakeHash($key);
+            $buckets[$bucketSlot] = [$h, $key, $valueType, $value, $next];
+            $hashSlot = $h | $mask;
+            $hash[$hashSlot] = $bucketSlot;
         }
-        static::assertSame($n, count($hashSlots), $caller);
-        static::assertSame($n, count($bucketSlots), $caller);
-        static::assertSame(count($profile['buckets']), count($bucketSlots));
-        foreach ($profile['buckets'] as $key => $row) {
-            /** @var Bucket $bucket */
-            $bucket = $bucketSlots[$key];
-            if ($row['type'] !== ZendTypes::IS_UNDEF) {
-                static::assertSame($row['value'], $bucket->val->value->{$row['field']}, $caller);
-                static::assertSame($row['type'], $bucket->val->u1_v_type, $caller);
-                static::assertSame($row['h'], $bucket->h, $caller);
-                static::assertSame($row['next'], $bucket->val->u2_next, $caller);
-            } else {
-                static::assertSame(ZendTypes::IS_UNDEF, $bucket->val->u1_v_type, $caller);
-                static::assertSame(null, $bucket->val->u2_next, $caller);
-            }
-        }
+        return [
+            'show' => $input['show'],
+            'hash' => $hash,
+            'buckets' => $buckets,
+        ];
     }
 
     /**
@@ -188,11 +239,15 @@ class HashRehashTest extends AbstractHashSetup {
             $bucket = new Bucket($slot);
             list($h, $key, $type, $value, $next) = $row;
             $bucket->val->u2_next = $next;
+            $h = ($key === (int)$key) ? ZendString::fakeIntHash($key) : ZendString::fakeHash($key);
             $bucket->h = $h;
             $bucketKey = ($key === (int)$key) ? null : $key;
             $bucket->key = $bucketKey;
+            if (($key === (int)$key)) {
+                $bucket->intKey = $key;
+            }
             if ($type === 'string') {
-                $bucket->val->value->str = $value;
+                $bucket->val->value->str->val = $value;
                 $field = 'str';
                 $zendType = ZendTypes::IS_STRING;
                 $bucket->key = $key;
@@ -222,52 +277,26 @@ class HashRehashTest extends AbstractHashSetup {
     }
 
     /**
-     * @param int $nValues
-     * @return array
+     * @covers \App\ZendEngine3\Hash\HashRehash::zend_hash_rehash
+     * @covers \App\ZendEngine3\Hash\HashRehash::rehashHoles
+     * @covers \App\ZendEngine3\Hash\HashRehash::rehashBucketSlot
      * @throws \Exception
      */
-    public function buildPacked(int $nValues): array {
-        $show = [];
-        $return = ['n' => $nValues, 'hash' => [], 'buckets' => []];
-        $nValues = HashResize::zend_hash_check_size($nValues);
-        $this->ht->nTableSize = $nValues;
-        $this->ht->nTableMask = HashTable::HT_SIZE_TO_MASK($nValues);
-        $this->ht->nNumOfElements = $nValues;
-        $this->ht->nNumUsed = $nValues;
-        $this->ht->HASH_FLAG_UNINITIALIZED = 0;
-        $this->ht->HASH_FLAG_PACKED = 1;
-        $this->ht->arData = [];
-        $slot = $this->ht->nTableMask;
-        while ($slot < 0) {
-            $this->ht->arData[$slot] = ZendTypes::HT_INVALID_IDX;
-            $return['hash'][$slot] = ZendTypes::HT_INVALID_IDX;
-            $slot++;
-        }
-        $value = 'zz';
-        while ($slot < $nValues) {
-            $bucket = new Bucket($slot);
-            $bucket->val->value->str = ++$value;
-            $bucket->val->u1_v_type = ZendTypes::IS_STRING;
-            $bucket->val->u2_next = null;
-            $bucket->h = $slot;
-            $this->ht->arData[$slot] = $bucket;
-            $return['buckets'][$slot] =
-                [
-                    'value' => $value,
-                    'field' => 'str',
-                    'type' => ZendTypes::IS_STRING,
-                    'h' => $slot,
-                    'next' => null,
-                ];
-            $show[$slot] = $value;
-            $slot++;
-        }
-        $return['show'] = $show;
-        return $return;
+    public function testMixedHoles(): void {
+        $profile = $this->buildMixed(static::MIXED_HOLES);
+
+        $success = HashRehash::zend_hash_rehash($this->ht);
+
+        static::assertSame(ZendTypes::SUCCESS, $success);
+        static::assertSame(4, $this->ht->nNumOfElements);
+        static::assertSame(4, $this->ht->nNumUsed);
+        static::assertSame(0, $this->ht->HASH_FLAG_UNINITIALIZED);
+        $this->probeTable($profile, __FUNCTION__);
+
     }
 
     /**
-     * @covers \App\ZendEngine3\Hash\HashRehash::isEmptyArray
+     * @covers       \App\ZendEngine3\Hash\HashRehash::isEmptyArray
      * @param int $nNumOfElements
      * @param bool $expected
      * @dataProvider dataEmpty
@@ -301,7 +330,7 @@ class HashRehashTest extends AbstractHashSetup {
         $success = HashRehash::clearEmptyArray($this->ht);
 
         static::assertSame(ZendTypes::SUCCESS, $success);
-        static::assertSame(16, count($this->ht->arData));
+        static::assertSame(8, count($this->ht->arData));
     }
 
     /**
@@ -311,5 +340,41 @@ class HashRehashTest extends AbstractHashSetup {
         $success = HashRehash::clearPackedArray($this->ht);
 
         static::assertSame(ZendTypes::SUCCESS, $success);
+    }
+
+    /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::bucketSlotUnused
+     * @throws \Exception
+     */
+    public function testBucketSlotUnusedNull(): void {
+        HashTable::htBucketReset($this->ht);
+
+        static::assertSame(true, HashRehash::bucketSlotUnused($this->ht, 0));
+    }
+
+    /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::bucketSlotUnused
+     * @throws \Exception
+     */
+    public function testBucketSlotUnusedUndef(): void {
+        HashTable::htBucketReset($this->ht);
+        $bucket = new Bucket(0);
+        $bucket->val->u1_v_type = ZendTypes::IS_UNDEF;
+        $this->ht->arData[0] = $bucket;
+
+        static::assertSame(true, HashRehash::bucketSlotUnused($this->ht, 0));
+    }
+
+    /**
+     * @covers \App\ZendEngine3\Hash\HashRehash::bucketSlotUnused
+     * @throws \Exception
+     */
+    public function testBucketSlotUnusedLong(): void {
+        HashTable::htBucketReset($this->ht);
+        $bucket = new Bucket(0);
+        $bucket->val->u1_v_type = ZendTypes::IS_LONG;
+        $this->ht->arData[0] = $bucket;
+
+        static::assertSame(false, HashRehash::bucketSlotUnused($this->ht, 0));
     }
 }

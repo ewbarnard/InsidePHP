@@ -10,6 +10,7 @@ namespace App\ZendEngine3\ZendTypes;
  * Zend/zend_types.h line 237
  */
 class ZendArray {
+    public $trace = PHP_EOL;
     /** @var ZendRefcountedH */
     public $gc;
     /** @var int */
@@ -38,5 +39,17 @@ class ZendArray {
     public function __construct() {
         $this->gc = new ZendRefcountedH();
         $this->arData = [];
+    }
+
+    public function trace(string $message): void {
+        $this->trace .= $message . PHP_EOL;
+    }
+
+    public function begin(string $message): void {
+        $this->trace('Begin ' . $message);
+    }
+
+    public function progress(string $message): void {
+        $this->trace(' - ' . $message);
     }
 }

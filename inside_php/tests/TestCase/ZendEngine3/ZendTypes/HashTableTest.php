@@ -24,6 +24,7 @@ class HashTableTest extends AbstractHashSetup {
         $this->ht->nTableMask = HashTable::HT_SIZE_TO_MASK($this->ht->nTableSize);
 
         HashTable::HT_HASH_RESET($this->ht);
+        HashTable::htBucketReset($this->ht);
 
         static::assertSame(static::MIN, $this->ht->arData);
     }
@@ -37,6 +38,7 @@ class HashTableTest extends AbstractHashSetup {
         $this->ht->nTableMask = HashTable::HT_SIZE_TO_MASK($this->ht->nTableSize);
 
         HashTable::HT_HASH_RESET($this->ht);
+        HashTable::htBucketReset($this->ht);
 
         static::assertSame(static::MEDIUM, $this->ht->arData);
     }
