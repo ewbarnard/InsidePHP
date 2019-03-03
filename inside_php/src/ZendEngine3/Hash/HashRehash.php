@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: ewb
- * Date: 2018-12-29
- * Time: 16:16
- */
 
 namespace App\ZendEngine3\Hash;
 

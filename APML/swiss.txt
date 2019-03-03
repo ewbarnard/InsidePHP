@@ -1,0 +1,1523 @@
+*/
+*/  This has been built with COS/IOS 1.15 and 1.16.
+*/  The only piece that might be a problem is the mod to deck AP, which
+*/  declares the maximum number of overlays in your system.  You may
+*/  need to change the number to a slightly larger or smaller number.
+*/  Also note that my change may conflict with your change, if you
+*/  already change the number of overlays with local code.
+*/
+*/  Ed Barnard, Cray Research Inc.
+*/              ewb%crayamid.cray.com@uc.msc.umn.edu
+*/              ewb@crayamid
+*/
+*DK SWISS
+         LIST      ON,NXRF
+         LISTOP    (SWISS,$KOVL)
+         OVERLAY   SWISS
+**       LIST      GEN
+************************************************************************
+*                                                                      *
+*  Name     - SWISS                                                    *
+*                                                                      *
+*  Input    - None                                                     *
+*                                                                      *
+*  Output   - None                                                     *
+*                                                                      *
+*  Function - Root overlay for Swiss Adventure                         *
+*                                                                      *
+*  Method   - 1.  Call SWSWEL to print instructions.                   *
+*             2.  Establish initial location.                          *
+*             3.  While not at last location, call SWSHOW to run the   *
+*                 show.                                                *
+*             4.  Return (terminate).                                  *
+*                                                                      *
+************************************************************************
+         REGDEFS   (SCORE),,(WHERE,MODE,NEXT,AA,QUIT)
+         EXT       %MYID,SW@BEGIN,SW@NE,SW@FINAL,SW@TRAVL,SW@SNIDE
+         EXT       SW@CHECK
+         LIST      OFF
+*CALL SWISSCOM
+         LIST      *
+
+         R!SCORE = 0              .Initialize score (checkpoints found)
+         R!QUIT  = SW@QUIT
+         CALL      SWSWEL
+         R!WHERE = R!%MYID + 1
+         R!MODE  = SW$TRAIN
+         $UNTIL    (R!WHERE = SW@FINAL)
+           CALL      SWSHOW,(R!WHERE,RO=NEXT,RO=MODE)
+           R!WHERE = R!NEXT
+           $IF         (R!WHERE=R!QUIT)
+*
+*            Our poor adventurer wants to bail out.  Let him.
+*
+*            SIMABORT
+             RETURN
+           $ENDIF
+         $ENDTIL
+*
+*  We are at the final location.
+*
+         CALL       SWSHOW,(R!WHERE,RO=NEXT,RO=MODE)
+         RETURN
+         END
+*DK SWSHOW
+         LIST      ON,NXRF
+         LISTOP    (SWSHOW,$KOVL)
+         OVERLAY   SWSHOW
+************************************************************************
+*                                                                      *
+*  Name     - SWSHOW                                                   *
+*                                                                      *
+*  Input    - Current location ordinal                                 *
+*                                                                      *
+*  Output   - New location ordinal                                     *
+*             Mode of travel to new location                           *
+*                                                                      *
+*  Function - Display location text, get new location                  *
+*                                                                      *
+*  Method   - 1.  Call SWSLOC to get description                       *
+*             2.  Display description                                  *
+*             3.  Call SWCHECK to display checkpoint sign, if any      *
+*             4.  Call SWSNEX to get new valid location                *
+*             5.  Call SWSMOV to display trundle text                  *
+*             6.  Deallocate old description buffers                   *
+*             7.  Return:  New location, travel mode to get there      *
+*                                                                      *
+*  Registers- CL    - Current location (input)                         *
+*             NL    - New location (output)                            *
+*             TV    - Travel mode (output)                             *
+*                                                                      *
+*             BA    - Base address (offset) of the travel table        *
+*             SW    - L.M. address of current location descriptor (SW@)*
+*             TX    - L.M. address of description text                 *
+*             TV1   - New travel mode (passed to TV)                   *
+*             NL1   - New location (passed to NL)                      *
+*                                                                      *
+************************************************************************
+         REGDEFS   (SCORE),(CL,NL,TV),(BA,SW,TX,TV1,NL1,OUTMSG,INMSG,ASK
+,__________________,LENTAB,TARGET,COUNT,MASK,TLEN,TCHAR)
+         EXT       %MYID,SW@BEGIN,SW@NE,SW@FINAL,SW@TRAVL,SW@SNIDE
+         EXT       SW@CHECK,SW@EXAM
+         LIST      OFF
+*CALL SWISSCOM
+         LIST      *
+
+         BA = SW@BEGIN
+         CALL      SWSLOC,(BA,CL,RO=SW,RO=TX)
+         MSG       TX
+         CALL      SWCHECK,(CL)
+         R = EXAM, CL=SW@EXAM
+         CALL      SWSNEX,(SW,CL,RO=NL1,RO=TV1)
+         RELMEM    TX
+         RELMEM    SW
+         CALL      SWSMOV,(R!TV1)
+         RETREG    R!NL1,NL
+         RETREG    R!TV1,TV
+         RETURN
+
+*  Text for final exam
+
+BKDUP    ECHO      BLOCKS=(NAMES,LENS,PLEASE)
+         BLOCK     BLOCKS
+BLOCKS   *
+         BLOCK     *
+BKDUP    ENDDUP
+
+TXDUP    ECHO      NAME="SW$ARAB",NUM="SW$ENGL"
+         BLOCK     NAMES
+START_NUM 'NAME'Z
+DONE_NUM *
+         NEWPAGE
+LEN_NUM  EQUALS    DONE_NUM-START_NUM
+         BLOCK     *
+
+MICNAME  MICRO     'NAME'
+MICLEN   MICSIZE   MICNAME
+         BLOCK     LENS
+         LEN_NUM,MICLEN
+         BLOCK     *
+
+         BLOCK     PLEASE
+P1_NUM      'Please name checkpoint no. NUM_: 'Z
+P2_NUM      *
+         NEWPAGE
+         ERRIF     P2_NUM-P1_NUM,NE,D'16
+         BLOCK     *
+TXDUP    ENDDUP
+
+EXAM     *
+
+*  Administer final exam
+
+GMEM     ECHO      SZ=(D'16,D'128),PT=(R!OUTMSG,R!INMSG)
+         GETMEM    SZ,PT
+         $UNTIL    (A=0)
+           PAUSE     1
+           GETMEM    SZ,PT
+         $ENDTIL
+         CLEAR     START=PT,COUNT=SZ
+GMEM     ENDDUP
+
+*  Establish table bases (must still add in %B)
+
+         R!ASK = PLEASE
+         R!LENTAB=LENS
+         R!TARGET=NAMES
+
+*  Initial values
+
+         R!SCORE = 0
+         R!COUNT = 1
+         R!MASK = 1
+
+*  Ask the sixteen questions.  Quit when wrong answer reached.
+
+         $UNTIL    (R!COUNT=D'17)
+
+           CLEAR     START=R!OUTMSG,COUNT=D'16
+           CLEAR     START=R!INMSG,COUNT=D'128
+           COPY      %B+R!ASK,R!OUTMSG,D'16
+
+           MSGR      R!OUTMSG,D'128,R!INMSG
+
+           R!%W1=%B+R!LENTAB
+           R!TLEN=(R!%W1)         .Compare length, parcels
+           R!LENTAB = R!LENTAB + 1
+           R!%W1=%B+R!LENTAB
+           R!TCHAR = (R!%W1)
+           R!%W1 = %B + R!TARGET  .Point to the correct answer
+
+           COMPARE R!%W1,0,R!INMSG,0,R!TCHAR,EQ=GOOD,LT=BAD,GT=BAD
+
+GOOD       *
+
+ECH        ECHO    DEST=(SCORE,COUNT,TARGET,ASK,LENTAB),INC=(R!MASK,1,__
+,__________________R!TLEN,D'16,1)
+           R!DEST = R!DEST + INC
+ECH        ENDDUP
+
+           R!MASK = R!MASK < 1
+
+         $ENDTIL
+
+BAD      *
+
+         RELMEM    R!OUTMSG
+         RELMEM    R!INMSG
+         EXIT
+         END
+*DK SWSLOC
+         LIST      ON,NXRF
+         LISTOP    (SWSLOC,$KOVL)
+         OVERLAY   SWSLOC
+************************************************************************
+*                                                                      *
+*  Name     - SWSLOC                                                   *
+*                                                                      *
+*  Input    - SW@ base offset, words                                   *
+*             Entry ordinal (1-relative)                               *
+*                                                                      *
+*  Output   - Local Memory pointer to SW@ entry                        *
+*             Local Memory pointer to text                             *
+*                                                                      *
+*  Function - Read a description entry into Local Memory               *
+*                                                                      *
+*  Method   - 1.  ERRIF SW@LE,NE,8                                     *
+*             2.  Allocate SW@LE parcels Local Memory                  *
+*             3.  Determine SWSDAT overlay address in Buffer Memory    *
+*             4.  Read 8 parcels/2 words to Local Memory buffer.       *
+*                 MOS address = (ordinal-1)*2 + SW@ base offset +      *
+*                                               SWSDAT address.        *
+*             5.  Determine text offset and length                     *
+*             6.  Allocate [text length*4]-parcel Local Memory buffer  *
+*             7.  Read in text                                         *
+*             8.  Return:  Pointers to both buffers                    *
+*                                                                      *
+************************************************************************
+         REGDEFS   (SCORE),(MOSOFF,ORD,LMDESC,LMTXT),___________________
+,__________________(AA,MU,ML,BL,BU,AB,TO,TL,D1,T1)
+         EXT       %MYID,SW@BEGIN,SW@NE,SW@FINAL,SW@TRAVL,SW@SNIDE
+         EXT       SW@CHECK
+         EXT       OVLTABLE,O$SWSDAT
+         LIST      OFF
+*CALL SWISSCOM
+         LIST      *
+
+         AA = D'8
+         GETMEM    AA,D1        .Allocate space for SW@ entry
+         $UNTIL    (A=0)
+           PAUSE   1
+           GETMEM  AA,D1
+         $ENDTIL
+
+* Determine SWSDAT overlay address in Buffer Memory, by looking it
+* up in the Kernel-resident Overlay Table
+
+         AA = O$SWSDAT
+         AA = AA<2
+         AA = AA + OVLTABLE       .OT@ entry address in Kernel
+         GET       MU,OT@MUP,AA   .MOS upper
+         GET       ML,OT@MLO,AA   .MOS lower
+
+*  Now the offset into SWSDAT
+
+         R!ORD = R!ORD - 1        .Ordinal was 1-relative
+         R!ORD = R!ORD<1          .2 MOS words per entry
+         AA = R!MOSOFF + R!ORD    .Offset into overlay
+         BU = MU
+         C = 0
+         BL = ML + AA             .Absolute Buffer Memory address
+         BU = BU+1,C#0
+         AA = 2
+         MOSR      BU,BL,D1,AA  .Read SW@ entry
+
+*  Find and read in text
+
+         GET       TO,SW@TXO,D1        .Text offset
+         GET       TL,SW@TXL,D1        .Text length, words
+         AB = TL<2                     .Text length, parcels
+
+         GETMEM    AB,T1              .Allocate text buffer
+         $UNTIL    (A=0)
+           PAUSE   1
+           GETMEM  AB,T1
+         $ENDTIL
+
+         BU = MU
+         C = 0
+         BL = TO + ML
+         BU = BU+1,C#0                 .Buffer Memory text address
+         MOSR      BU,BL,T1,TL         .Read in the text
+
+         RETREG    D1,R!LMDESC
+         RETREG    T1,R!LMTXT
+
+         RETURN
+         END
+*DK SWSMOV
+         LIST      ON,NXRF
+         LISTOP    (SWSMOV,$KOVL)
+         OVERLAY   SWSMOV
+************************************************************************
+*                                                                      *
+*  Name     - SWSMOV                                                   *
+*                                                                      *
+*  Input    - Mode of travel                                           *
+*                                                                      *
+*  Output   - None                                                     *
+*                                                                      *
+*  Function - Display text showing travel                              *
+*                                                                      *
+*  Method   - 1.  Call SWSLOC to get travel description                *
+*             2.  Display description                                  *
+*             3.  Deallocate description buffers                       *
+*             4.  Return                                               *
+*                                                                      *
+************************************************************************
+         REGDEFS   (SCORE),(TM),(MOSOFF,LMDESC,LMTXT)
+         EXT       %MYID,SW@BEGIN,SW@NE,SW@FINAL,SW@TRAVL,SW@SNIDE
+         EXT       SW@CHECK
+         LIST      OFF
+*CALL SWISSCOM
+         LIST      *
+
+         R!MOSOFF = SW@TRAVL      .Table base in overlay
+         CALL      SWSLOC,(R!MOSOFF,TM,RO=LMDESC,RO=LMTXT)
+         MSG       R!LMTXT
+         RELMEM    R!LMDESC
+         RELMEM    R!LMTXT
+         RETURN
+         END
+*DK SWSNEX
+         LIST      ON,NXRF
+         LISTOP    (SWSNEX,$KOVL)
+         OVERLAY   SWSNEX
+************************************************************************
+*                                                                      *
+*  Name     - SWSNEX                                                   *
+*                                                                      *
+*  Input    - Local Memory address of current location descriptor (SW@)*
+*             Current location ordinal                                 *
+*                                                                      *
+*  Output   - Ordinal of new location                                  *
+*             Mode of travel to get there                              *
+*                                                                      *
+*  Function - Get new valid location                                   *
+*                                                                      *
+*  Method   - 1.  Allocate prompt buffer                               *
+*             2.  Allocate and clear response buffer                   *
+*             3.  Prompt and read travel description                   *
+*             4.  Deallocate Local Memory buffers                      *
+*             5.  If response found in table,                          *
+*                 return:  New location                                *
+*                          Mode of travel to get there                 *
+*                 Return from overlay.                                 *
+*             6.  Call SWSNO to write snide remark                     *
+*             7.  GOTO SWSNEX to try for a better response             *
+*                                                                      *
+************************************************************************
+         REGDEFS  (SCORE),(LMDESC,CL,NORD,TM),(IN,OUT,AA,AB,IT,N1,T1,CT)
+         EXT       %MYID,SW@BEGIN,SW@NE,SW@FINAL,SW@TRAVL,SW@SNIDE
+         EXT       SW@CHECK,SW@TEST,SW@EXAM
+         LIST      OFF
+*CALL SWISSCOM
+         LIST      *
+
+         BLOCK     TEXT
+MESSAGE  'Where to, boss?'H,0
+MESSEND  *
+         NEWPAGE
+MESSL    EQUALS    MESSEND-MESSAGE
+         BLOCK     *
+
+         CT = 0                            .Invalid response count
+STARTIT  *
+         CT = CT + 1
+         AA = MESSL
+         AB = D'256
+GMEM     ECHO      SZ=(AA,AB),PT=(R!OUT,IN)
+         GETMEM    SZ,PT
+         $UNTIL    (A=0)
+           PAUSE   1
+           GETMEM  SZ,PT
+         $ENDTIL
+         CLEAR     START=PT,COUNT=SZ
+GMEM     ENDDUP
+
+         COPY      %B+MESSAGE,R!OUT,AA
+
+*  Trap passing the exam as a special case.  If our adventurer
+*  made it all the way through and passed the exam, shunt him or
+*  her directly into the victory circle.
+
+         $IF       (CL=SW@EXAM),AND,(R!SCORE=177777)
+           IT = 'W'R              .Go west to victory
+         $ELSE
+           MSGR      R!OUT,AB,IN
+           IT = (IN)>D'8          .Read in first character
+         $ENDIF
+
+         RELMEM    IN
+         RELMEM    R!OUT
+
+*  Trap a QUIT request
+
+         AA = 'Q'R
+         $IF       (AA=IT)
+           N1        = SW@QUIT
+           T1        = SW$QUIT
+           RETREG    N1,R!NORD
+           RETREG    T1,TM
+           RETURN
+         $ENDIF
+
+*  Now see if it's a good response
+
+CHK      ECHO      DIREC="SW%DIR2"
+         AA = 'DIREC'R
+         $IF       (AA=IT)
+           GET     N1,SW@_DIREC_D,R!LMDESC
+           GET     T1,SW@_DIREC_M,R!LMDESC
+           $IF     (N1 = 0)       .Can't go that way
+             P = NOPE
+           $ENDIF
+
+*  See if we require a certain score to proceed.
+
+           $IF     (T1=SW$SCORE)
+             AA = SW@TEST
+             AB = CL-AA           .Score must contain 2**AB
+             AA = 1
+             B  = AB
+             AA = AA < B          .The needed bit
+             AB = R!SCORE & AA    .Is it there?
+             P = NOPE, AB=0       .No
+           $ELSEIF (T1=SW$PASS)
+             P = NOPE, R!SCORE#177777   .Did not pass
+           $ENDIF
+           RETREG  N1,R!NORD
+           RETREG  T1,TM
+           RETURN
+         $ENDIF
+CHK      ENDDUP
+
+*  Not a valid response
+
+NOPE     *
+         CALL      SWSNO
+         P = STARTIT
+         END
+*DK SWCHECK
+         LIST      ON,NXRF
+         LISTOP    (SWCHECK,$KOVL)
+         OVERLAY   SWCHECK
+************************************************************************
+*                                                                      *
+*  Name     - SWCHECK                                                  *
+*                                                                      *
+*  Input    - Current location ordinal                                 *
+*                                                                      *
+*  Output   - Updated score                                            *
+*                                                                      *
+*  Function - If we are at a checkpoint, display signpost and          *
+*             update score.                                            *
+*                                                                      *
+*  Method   - For each possible checkpoint (there are D'16 of them),   *
+*               Call SWSLOC to get checkpoint descriptor (SW@CHECK)    *
+*               Compare SW@ND to current location for a match (we      *
+*                 have set up the checkpoint descriptor so that the    *
+*                 travel-North-destination (SW@ND) points to this      *
+*                 checkpoint's location)                               *
+*               If we match,                                           *
+*                 Display checkpoint text (the signpost)               *
+*                 Form a 1-bit mask corresponding to the checkpoint    *
+*                 Merge the mask into SCORE (accomplish this by        *
+*                   clearing the target bit in SCORE and adding the    *
+*                   mask to SCORE).  With this method, we do not care  *
+*                   how many times the checkpoint is seen.             *
+*                 Return                                               *
+*               Endif                                                  *
+*             Endloop                                                  *
+*             Return                                                   *
+*                                                                      *
+*  Registers- SCORE - A bit mask, with bit 2**(n-1) corresponding to   *
+*                     checkpoint n.  There are 16 checkpoints,         *
+*                     numbered 1 - 16. (Input and output)              *
+*                                                                      *
+*             CL    - Current location (input)                         *
+*                                                                      *
+*             BA    - Base address (offset) of the checkpoint table    *
+*             SW    - L.M. address of checkpoint descriptor (SW@)      *
+*             TX    - L.M. address of description text                 *
+*             SC    - Copy of SCORE at exit for display purposes       *
+*             C2    - Copy of CL at exit for display purposes          *
+*             CK    - Checkpoint number                                *
+*             ND    - SW@ND for this checkpoint (i.e. this             *
+*                     checkpoint's location)                           *
+*             MK    - Bit mask for this checkpoint (single bit)        *
+*                                                                      *
+************************************************************************
+         REGDEFS   (SCORE),(CL),(BA,SW,TX,SC,C2,CK,ND,MK)
+         EXT       %MYID,SW@BEGIN,SW@NE,SW@FINAL,SW@TRAVL,SW@SNIDE
+         EXT       SW@CHECK
+         LIST      OFF
+*CALL SWISSCOM
+         LIST      *
+
+         BA = SW@CHECK
+         MK = 1
+         CK = 1
+
+         $UNTIL    (CK=D'17)
+
+           CALL      SWSLOC,(BA,CK,RO=SW,RO=TX)
+           GET       ND,SW@ND,SW
+           $IF       (ND=CL)
+             MSG       TX
+             RELMEM    TX
+             RELMEM    SW
+
+*            Update the score.  Mask out the bit in case it's already
+*            there, then add it back in.
+
+             OR     R!SCORE,MK,R!SCORE
+             SC = R!SCORE         .For register display purposes
+             C2 = CL              .Ditto.  Use DIS,A,R431,HT=IOP on CSIM
+             RETURN
+           $ENDIF
+           RELMEM TX
+           RELMEM SW
+
+           C = 0
+           CK = CK + 1
+           C = 0
+           MK = MK < 1
+           C = 0
+         $ENDTIL
+         RETURN
+         END
+*DK SWSNO
+         LIST      ON,NXRF
+         LISTOP    (SWSNO,$KOVL)
+         OVERLAY   SWSNO
+************************************************************************
+*                                                                      *
+*  Name     - SWSNO                                                    *
+*                                                                      *
+*  Input    - None                                                     *
+*                                                                      *
+*  Output   - None                                                     *
+*                                                                      *
+*  Function - Display snide remark                                     *
+*                                                                      *
+*  Method   - 1. Determine random message ordinal                      *
+*             2. Call SWSLOC to get remark text                        *
+*             3. Display text                                          *
+*             4. Deallocate description buffers                        *
+*             5. Return                                                *
+*                                                                      *
+************************************************************************
+         REGDEFS   (SCORE),,(AA,AB,LMDESC,LMTXT)
+         EXT       %MYID,SW@BEGIN,SW@NE,SW@FINAL,SW@TRAVL,SW@SNIDE
+         EXT       SW@CHECK
+         LIST      OFF
+*CALL SWISSCOM
+         LIST      *
+
+         RTC : 10
+         AA = A
+         AA = AA & 7
+         AA = AA + 1              .Random message ordinal
+         AB = SW@SNIDE
+         CALL      SWSLOC,(AB,AA,RO=LMDESC,RO=LMTXT)
+         MSG       R!LMTXT
+         RELMEM    R!LMTXT
+         RELMEM    R!LMDESC
+         RETURN
+         END
+*DK SWSWEL
+         LIST      ON,NXRF
+         LISTOP    (SWSWEL,$KOVL)
+         OVERLAY   SWSWEL
+************************************************************************
+*                                                                      *
+*  Name     - SWSWEL                                                   *
+*                                                                      *
+*  Input    - None                                                     *
+*                                                                      *
+*  Output   - None                                                     *
+*                                                                      *
+*  Function - Print welcome message and instructions                   *
+*                                                                      *
+*  Method   - 1.  Allocate Local Memory space for msgs and response    *
+*             2.  Copy messages to Local Memory space                  *
+*             3.  MSGR welcome message                                 *
+*             4.  If response begins with 'N', MSG second message      *
+*             5.  Deallocate message and response buffers              *
+*             6.  Return                                               *
+*                                                                      *
+************************************************************************
+         REGDEFS   (SCORE),,(M1,M2,IN,L1,L2,LI,IT)
+         EXT       %MYID,SW@BEGIN,SW@NE,SW@FINAL,SW@TRAVL,SW@SNIDE
+         EXT       SW@CHECK
+         LIST      OFF
+*CALL SWISSCOM
+         LIST      *
+
+         BLOCK     TEXT
+MSG1     'Welcome to Swiss Adventure.'H,LFCR
+         'Have you been here before (answer YES or NO)?'H,0
+MSG2     'Now is your chance to roam certain parts of Europe.'H,LFCR
+         'You might find some treasure and get to quit.  Or you'H,LFCR
+         'might not.  You can get places by typing direction'H,LFCR
+         'commands (North, South, East, West, Up, Down).'H,LFCR
+         'You are most likely to find what you seek in or under'H,LFCR
+         'castles.  Once you find it (or them), you may enter'H,LFCR
+         'the Winners'' Circle.  Try to avoid the Scrap Heap.'H,LFCR
+         'If you desperately need to quit, try typing Quit.'H,LFCR
+         'Commands may be abbreviated to one letter.'H,LFCR,LFCR
+         'Off you go now. . .'H,LFCR,0
+END2     *
+         NEWPAGE
+MSG2L    EQUALS    END2-MSG2
+MSG1L    EQUALS    MSG2-MSG1
+         BLOCK     *
+
+         L1 = MSG1L
+         L2 = MSG2L
+         LI = D'256
+GMEM     ECHO      SZ=(L1,L2,LI),PT=(M1,M2,IN)
+         GETMEM    SZ,PT
+         $UNTIL    (A=0)
+           PAUSE   1
+           GETMEM  SZ,PT
+         $ENDTIL
+         CLEAR     START=PT,COUNT=SZ
+GMEM     ENDDUP
+         COPY      %B+MSG1,M1,L1
+         COPY      %B+MSG2,M2,L2
+         MSGR      M1,LI,IN
+         IT = (IN)>D'8            .Yes or no
+         LI = 'Y'R
+         $IF       (LI#IT)
+           MSG     M2
+         $ENDIF
+         RELMEM    M1
+         RELMEM    M2
+         RELMEM    IN
+         RETURN
+         END
+*CDK SWISSCOM
+************************************************************
+*  Definitions for Swiss Adventure overlays                *
+************************************************************
+
+*  CSIM apparantly adds a linefeed to each line produced by the Kernel.
+*  Make the end-of-line linefeed/carriage return text (O'5015)
+*  a symbolic variable, LFCR, so that it may be flipped between
+*  <space><CR> and <LF><CR>.
+
+LFCR     EQUALS    O'5015
+*LFCR     EQUALS    O'20015        .<space><CR> for csim runs only
+
+
+*  Travel modes (SW$xxxx)
+
+SW$UNDEF NEXT      0              .Unknown mode of travel
+SW$PASS  NEXT                     .Needs to have passed final exam
+SW$SCORE NEXT                     .Needs good score to proceed
+SW$QUIT  NEXT                     .Adventurer wants to quit
+SW$WALK  NEXT                     .Travel on foot
+SW$TRAIN NEXT                     .By train
+SW$ASIDE NEXT                     .Travel to different IOP
+SW$BACK  NEXT                     .Return to original IOP
+SW$MAX   EQUALS    SW$BACK        .Number of codes
+
+*  Micros for echo parameter lists (SW%xxxx)
+
+SW%DIREC MICRO     '(N,E,S,WEST,U,D)'
+SW%DIR2  MICRO     '(N,E,S,W,U,D)'
+SW%MODE  MICRO     '(NM,EM,SM,WM,UM,DM)'
+SW%DIR0  MICRO     'N=X,E=X,S=X,WEST=X,U=X,D=X'
+SW%MODEW MICRO     'NM=SW$WALK,EM=SW$WALK,SM=SW$WALK,WM=SW$WALK,________
+,__________________UM=SW$WALK,DM=SW$WALK'
+
+
+*  Location descriptor table entry (SW@)
+
+SW@QUIT  EQUALS    177777         .Adventurer wants to quit
+
+SW@      TABLE     LH=0,LE=8
+SW@TXO   FIELD     0,0,16         .Description offset into SWSDAT,
+                                  .in WORDS
+SW@TXL   FIELD     +,0,16         .Description length, WORDS
+
+SW@ECH   ECHO      WHERE="SW%DIR2"
+SW@_WHERE_D    FIELD    +,0,12    .Travel destination ordinal
+SW@_WHERE_M    FIELD    $,12,4    .Travel mode
+SW@ECH   ENDDUP
+SW@      ENDTABLE
+
+XO       EQUALS    0
+BITS4    EQUALS    D'16
+         ERRIF     SW$MAX,GE,BITS4
+
+         MACRO
+DEST     SWISSTXS  "SW%DIR0","SW%MODEW"
+         LOCAL     TXLEN,ECH,MIC,WDEST,XXN,XXS,XXE,XXW,XXU,XXD
+MIC      MICRO     'DEST'
+MIC      MICRO     '"MIC"L'
+WDEST    SET       W.DEST
+         WDEST                    .SW@TXO
+         "MIC"                    .SW@TXL
+*        VWD       04/NM
+*        VWD       12/N_O
+*        VWD       04/EM
+*        VWD       12/E_O
+*        VWD       04/SM
+*        VWD       12/S_O
+*        VWD       04/WM
+*        VWD       12/WEST_O
+*        VWD       04/UM
+*        VWD       12/U_O
+*        VWD       04/DM
+*        VWD       12/D_O
+XXN      EQUALS    N_O*BITS4+NM
+XXE      EQUALS    E_O*BITS4+EM
+XXS      EQUALS    S_O*BITS4+SM
+XXW      EQUALS    WEST_O*BITS4+WM
+XXU      EQUALS    U_O*BITS4+UM
+XXD      EQUALS    D_O*BITS4+DM
+         XXN,XXE,XXS,XXW,XXU,XXD
+*
+*        N_O*BITS4+NM
+*        E_O*BITS4+EM
+*        S_O*BITS4+SM
+*        WEST_O*BITS4+WM
+*        U_O*BITS4+UM
+*        D_O*BITS4+DM
+SWISSTXS ENDM
+
+         MACRO
+         SWISSETX
+         LOCAL     ENDIT,MIC
+ENDIT    BSS       0
+         NEWPAGE
+MIC      MICRO     '"DESTMIC"'
+MIC      MICRO     '"DESTMIC"L'
+"MIC"    EQUALS  W.ENDIT-W."DESTMIC"
+NE       SET       NE+1
+"DESTMIC"O EQUALS  NE
+SWISSETX ENDM
+
+         MACRO
+DEST     SWISSTXT
+DEST     BSS       0
+DESTMIC  MICRO     'DEST'
+SWISSTXT ENDM
+
+SW$ENGL  MICRO     '(01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16)'
+
+SW$ARAB1 MICRO     '(WAAHID,ITHNEYN,THALATHA,ARBA`A,KHAMSA,SITTA,'
+SW$ARAB2 MICRO     'SAB`A,THAMAANYA,TIS`A,`ASHARA,IHDA`SH,ITHNA`SH,'
+SW$ARAB3 MICRO     'THALATHTA`SH,ARBA`TA`SH,KHAMSTA`SH,SITTA`SH)'
+
+SW$ARAB  MICRO     '"SW$ARAB1""SW$ARAB2""SW$ARAB3"'
+
+CK1      MICRO     '(ZERMATT,JUNGFRA,SCHWYZ,NEUCHAT,'
+CK2      MICRO     'MONTREU,WVIEW,PRISON,TRAP,'
+CK3      MICRO     'MAZE03,MAZE04,MAZE15,MAZE16,'
+CK4      MICRO     'VIEW,LEVEL2,EXITSTA,GLOWING)'
+
+CKMIC    MICRO     '"CK1""CK2""CK3""CK4"'
+
+*DK SWSDAT
+         LIST      ON,NXRF
+         LISTOP    (SWSDAT,$KOVL)
+         OVERLAY   SWSDAT,TYPE=DATA
+**       LIST      GEN
+************************************************************************
+*                                                                      *
+*  Name     - SWSDAT                                                   *
+*                                                                      *
+*  Input    - None                                                     *
+*                                                                      *
+*  Output   - None                                                     *
+*                                                                      *
+*  Function - Data overlay for Swiss Adventure                         *
+*                                                                      *
+*  Method   - Madness                                                  *
+*                                                                      *
+************************************************************************
+
+*  SW@BEGIN, SW@TRAVL, SW@SNIDE are word offsets showing where the
+*  corresponding 2-word descriptors begin.
+*
+*  SW@NE and SW@FINAL tell how many locations, and where the last one is
+
+         ENTRY     SW@BEGIN,SW@NE,SW@FINAL,SW@TRAVL,SW@SNIDE
+         ENTRY     SW@CHECK,SW@EXAM,SW@TEST
+*CALL SWISSCOM
+*        LIST      MAC,DUP
+NE       SET       0
+
+*  The travel table
+
+         BSS       0
+ZURICH   SWISSTXT
+  LFCR,'Zurich          'H,LFCR
+  'You are in Zurich, gazing across Zurichsee to the Swiss Alps. 'H,LFCR
+  'Swissair flew you to Zurich a week ago.  Your eyes drink their'H,LFCR
+  'fill, then you walk over to the Zurich Bahnhof and await your 'H,LFCR
+  'train.'H,LFCR,LFCR
+  'A gentle voice warns you:  Do not play SWISS on IOP-0.'Z
+         SWISSETX
+PARIS    SWISSTXT
+  LFCR,'Paris           'H,LFCR
+  'You are in Paris.  Air France flew you here last Saturday.    'H,LFCR
+  'You have survived your week here, and purchased a ticket on   'H,LFCR
+  'the Orient Express as far as Bern, the Capitol of Switzerland.'H,LFCR
+  'Your train awaits you.'Z
+         SWISSETX
+GENEVA   SWISSTXT
+  LFCR,'Geneva          'H,LFCR
+  'You are in Geneva.  Swissair brought you here a week ago, and 'H,LFCR
+  'you are ready to venture North to Lausanne or even beyond.    'H,LFCR
+  'Your train awaits you.'Z
+         SWISSETX
+MILAN    SWISSTXT
+  LFCR,'Milan           'H,LFCR
+  'You are in Milano.  Alitalia brought you here a week ago.  You'H,LFCR
+  'are anxious to take your trip through the Alps to Switzerland 'H,LFCR
+  'and begin your Swiss adventure.  Your train awaits you.'Z
+         SWISSETX
+BASEL    SWISSTXT
+  LFCR,'Basel'H,LFCR
+  'You visit the Kunstmuseum to see the superb paintings of'H,LFCR
+  'Holbein, Delacroix, Gauguin, Matisse, Ingres, Courbet, and'H,LFCR
+  'Van Gogh.'H,LFCR
+         SWISSETX
+LUZERN   SWISSTXT
+  LFCR,'Luzern'H,LFCR
+  'You discover the Lion of Luzern is 30 feet high and 42 feet'H,LFCR
+  'long.  It was carved into a sandstone cliff in 1821.  The Lion'H,LFCR
+  'commemorates the bravery of those Swiss soldiers who defended'H,LFCR
+  'Marie Antoinette during the French Revolution.  The cliff is'H,LFCR
+  'also the entrance to the Glacier Museum, which shows that palm'H,LFCR
+  'trees once grew here.  If you spend the evening here, listen'H,LFCR
+  'for the beautiful alpenhorn notes rolling off the lake.'H,LFCR
+         SWISSETX
+NEUCHAT  SWISSTXT
+  LFCR,'Neuchatel'H,LFCR
+  'You have found the Suchard chocolate factory.  Tours must be'H,LFCR
+  'arranged in advance, so call (038) 21-11-55 as soon as you'H,LFCR
+  'arrive.  While you wait, see the collection of mechanical'H,LFCR
+  'dolls and music boxes at the city museum.'H,LFCR
+         SWISSETX
+MONTREU  SWISSTXT
+  LFCR,'Montreux'H,LFCR
+  'You are here to tour the Chillon castle, immortalized by'H,LFCR
+  'Byron.  Its dungeon was used as a model for many movies.'H,LFCR
+  'You easily escape the Chillon dungeon--may you do as well in'H,LFCR
+  'Schloss Thun.'H,LFCR
+         SWISSETX
+JUNGFRA  SWISSTXT
+  LFCR,'Jungfraujoch'H,LFCR
+  'You have found the highest railstation in Europe, at 11,333'H,LFCR
+  'feet.  The Jungfrau, Eiger, and Monch display their deadly'H,LFCR
+  'beauty.'H,LFCR,LFCR
+  'You must change trains here to continue the loop through'H,LFCR
+  'Murren back to Interlaken.'H,LFCR
+         SWISSETX
+SCHWYZ   SWISSTXT
+  LFCR,'Schwyz'H,LFCR
+  'You have arrived in Schwyz.  You travel one mile uphill from  'H,LFCR
+  'the railstation to visit the Staatsarkivmuseum, to see the'H,LFCR
+  'thirteenth-century Oath of Eternal Alliance, the document'H,LFCR
+ 'which marks the founding of Switzerland.  This village''s name,'H,LFCR
+  'of course, became the country''s name.'H,LFCR
+         SWISSETX
+ZUG      SWISSTXT
+  LFCR,'Zug'H,LFCR
+  'If you have friends who live here, you can get keys to the old'H,LFCR
+  'city watchtowers.  The watchtowers provide an interesting view'H,LFCR
+  'of both history and the city.  Try the rotel (a mild fish from'H,LFCR
+  'Zug Lake) and kirsch made from local cherries.'H,LFCR
+         SWISSETX
+LOTSCHB  SWISSTXT
+  LFCR,'Inside the Lotschberg Tunnel'H,LFCR
+  'You are travelling through the 9-mile Lotschberg Tunnel.'H,LFCR
+  'This trip includes crossing the Bietschtal Bridge, which takes'H,LFCR
+  'the train 255 feet above the ravine it crosses.  I hope you'H,LFCR
+  'are sitting on the side of the train that faces the Brig rail-'H,LFCR
+  'station--you will see the beautiful mountain and farm scenery 'H,LFCR
+  'around Kandersteg and Frutigen.'H,LFCR
+         SWISSETX
+SPIEZ    SWISSTXT
+  LFCR,'Spiez'H,LFCR
+  'You have reached tiny Spiez on the Thunersee.  Tiny though it 'H,LFCR
+  'is, Spiez is a major crossroads for the Schweizer Bundesbahn  'H,LFCR
+ '(SBB), the world''s best rail system.  Bern lies North beyond  'H,LFCR
+  'Thun; you may travel West past Zweizimmen in a series of hair-'H,LFCR
+  'pin bends (by train!) down to Montreux and Lausanne; Frutigen'H,LFCR
+  'lies South on the way to the Lotschberg Tunnel and Brig.'H,LFCR
+  'Interlaken and the Berner Oberland lie East.'H,LFCR,LFCR
+  'I hope you are hungry enough to walk down the hill to Hotel'H,LFCR
+  'Krone and eat the Geschnetzeltes und Rosti.  Be sure to walk  'H,LFCR
+  'another 15 minutes and visit the castle overlooking Lake Thun.'H,LFCR
+  'You have but a single option surpassing this view of the lake 'H,LFCR
+  'and reflections of the surrounding mountains:  Take the boat  'H,LFCR
+  'between Spiez and Thun.'H,LFCR
+         SWISSETX
+BRIG     SWISSTXT
+  LFCR,'Brig            'H,LFCR
+  'You have reached Brig, in the Swiss Alps.  You are along the  'H,LFCR
+  'Orient Express route.  The Brig-Visp-Zermatt cog railway      'H,LFCR
+  'begins here.'Z
+         SWISSETX
+ZERMATT  SWISSTXT
+  LFCR,'Zermatt         'H,LFCR
+  'You are in Zermatt, at the base of the Matterhorn.  Many      'H,LFCR
+  'famous mountain climbers are buried in the cemetary here.'Z
+         SWISSETX
+INTERLA  SWISSTXT
+  LFCR,'Interlaken     'H,LFCR
+  'You are in Interlaken, on the Thunersee.  You see many        'H,LFCR
+  'tourists here on their way to the Eiger, Monch, and Jungfrau.'Z
+         SWISSETX
+LAUSANN  SWISSTXT
+  LFCR,'Lausanne        'H,LFCR
+  'You are in Lausanne, the first home of Cray Switzerland.'Z
+         SWISSETX
+BERN     SWISSTXT
+  LFCR,'Bern            'H,LFCR
+  'You are in Bern, the capitol of Switzerland.  Thun and the    'H,LFCR
+  'Thunersee are only twenty minutes away by train.'Z
+         SWISSETX
+THUN     SWISSTXT
+  LFCR,'Thun            'H,LFCR
+  'You have reached the city of Thun.  You wander about the city.'H,LFCR
+  'You find a covered stairway.  Centuries of use have worn      'H,LFCR
+  'a groove in the stepstones.  The stairway proceeds North up   'H,LFCR
+  'the hill.'Z
+         SWISSETX
+ENTRANC  SWISSTXT
+  LFCR,'Entrance        'H,LFCR
+  'You have reached the Thun Castle entrance.  Steps lead down   'H,LFCR
+  'to Stadt Thun.'Z
+         SWISSETX
+COURT    SWISSTXT
+  LFCR,'Court yard      'H,LFCR
+  'You are in the castle courtyard.  A cast iron cannon sits     'H,LFCR
+  'here.  Wooden steps, placed along a stone wall, lead up and   'H,LFCR
+  'inside the castle.'Z
+         SWISSETX
+GALLERY  SWISSTXT
+  LFCR,'Gallery         'H,LFCR
+  'This room is arranged like a museum gallery.  Beautiful       'H,LFCR
+  'tapestries adorn the walls, stained glass windows cast colored'H,LFCR
+  'shadows along the wood floor, and you see many medieval cos-  'H,LFCR
+  'tumes.  You can tell from this room that the castle is        'H,LFCR
+  'arranged as a box, with a turret at each corner.  A fire is   'H,LFCR
+  'laid in the enormous fireplace, but remains unlit.'Z
+         SWISSETX
+PRISON   SWISSTXT
+  LFCR,'Prison cell     'H,LFCR
+  'The East turret, on this level, is used as a small prison     'H,LFCR
+  'cell.  The walls and bed show the marks of various long-term  'H,LFCR
+  'residents.  Chains attach to a large ring set in the floor.'Z
+         SWISSETX
+TOYS     SWISSTXT
+  LFCR,'Toys            'H,LFCR
+  'This room is devoted to displays of medieval children''s toys,'H,LFCR
+  'along with arms and armour.  You can see the thatched castle  'H,LFCR
+  'roof another 50 feet above you.  A wooden ladder leads to an  'H,LFCR
+  'attic and interior catwalk 40 feet above you.'Z
+         SWISSETX
+ATTIC    SWISSTXT
+  LFCR,'Attic           'H,LFCR
+  'You are in the attic above the toy gallery.  The catwalk leads'H,LFCR
+  'around the whole castle wall, giving access to each           'H,LFCR
+  'observation turret.'Z
+         SWISSETX
+VIEWECH  ECHO      D=(N,S,E,W),NAME=(North,South,East,West),____________
+,__________________B=(S,N,WEST,E)
+D_VIEW   SWISSTXT
+  LFCR,'NAME View'H,LFCR
+  'This small room tops the NAME turret.  Arrow slits provide a'H,LFCR
+  'wide view of the surrounding area.'Z
+         SWISSETX
+VIEWECH  ENDDUP
+STAIRS   SWISSTXT
+  LFCR,'Stairs down     'H,LFCR
+  'You are in the western turret, in a tight circular stairway.'Z
+         SWISSETX
+ARTIFAC  SWISSTXT
+  LFCR,'Artifacts       'H,LFCR
+  'This room displays many items found in the surrounding area,  'H,LFCR
+  'including Roman coins, stone-age axes, and dog bones.'Z
+         SWISSETX
+KITCHEN  SWISSTXT
+  LFCR,'Kitchen         'H,LFCR
+  'You have reached the castle kitchen.  The room contains the   'H,LFCR
+  'usual implements.  A large piling is set in the floor.  It was'H,LFCR
+  'once used for hauling goods up from the water gate on the     'H,LFCR
+  'Thunersee.  The gate tunnel is caved in and bricked up.  You  'H,LFCR
+  'see a trap door standing open in the South corner.'Z
+         SWISSETX
+TRAP     SWISSTXT
+  LFCR,'Below trap door 'H,LFCR
+  'As you climb through the trap door and down the ladder, you   'H,LFCR
+  'note the ladder ends 9 feet above the stone floor below.  Your'H,LFCR
+  'weight upon the ladder releases a ratchet connected to the    'H,LFCR
+  'trap door above.  The door shuts and locks.'Z
+         SWISSETX
+LEVEL1   SWISSTXT
+  LFCR,'Dungeon level 1 'H,LFCR
+  'You are obviously somewhere in the first dungeon level, but   'H,LFCR
+  'you can tell nothing else in the dark.  Passages lead off in  'H,LFCR
+  'all directions except up.'Z
+         SWISSETX
+LEVEL2   SWISSTXT
+  LFCR,'Dungeon level 2 'H,LFCR
+  'No one has ever returned from this deep in the dungeon.  It   'H,LFCR
+  'will all be over soon.'Z
+         SWISSETX
+MAZE01   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of twisty, winding passages, nearly'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE02   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of twisty, windy passages, nearly'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE03   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of twisty, bendy passages, nearly'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE04   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of twisty, bending passages, almost'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE05   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of twisting, winding passages, almost'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE06   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of twisting, windy passages, almost'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE07   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of twisting, bendy passages, nearly'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE08   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of twisting, bending passages, nearly'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE09   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of winding, twisting passages, nearly'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE10   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of winding, twisty passages, almost'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE11   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of winding, bendy passages, almost'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE12   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of winding, bending passages, almost'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE13   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of windy, twisting passages, nearly'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE14   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of windy, twisty passages, nearly'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE15   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of windy, bendy passages, nearly'H,LFCR
+         'all alike.'Z
+         SWISSETX
+MAZE16   SWISSTXT
+         LFCR,'Glowing Cavern'H,LFCR
+         'The cavern walls are covered with thick 'H,
+         'moss.  The moss glows with a deep,'H,LFCR
+         'purple, pulsating light.  The moss provi'H,
+         'des enough light to see your'H,LFCR
+         'surroundings.  You are in a strange maze'H,
+         ' of windy, bending passages, nearly'H,LFCR
+         'all alike.'Z
+         SWISSETX
+VIEW     SWISSTXT
+  LFCR,'Viewing room    'H,LFCR
+  'You are standing on a plate glass window set in the floor.    'H,LFCR
+  'Through the window, you see a mound of gold, jewels, and      'H,LFCR
+  'system dumps.  Encircling the stack (actually a heap) of      'H,LFCR
+  'treasure is a 10-foot wide ditch.  Even though the ditch is   'H,LFCR
+  'extremely deep, you can see old bones and pocket protectors   'H,LFCR
+  'rotting at the bottom.  A sign beside the encircling ditch    'H,LFCR
+  'reads ''Winners Circle.'''Z
+         SWISSETX
+SIGNS    SWISSTXT
+  LFCR,'Signs of the times'H,LFCR
+  'You see several checkpoint signs (sixteen of them) stacked in 'H,LFCR
+  'one corner of the room.'Z
+         SWISSETX
+EXITSTA  SWISSTXT
+  LFCR,'EXIT stacks     'H,LFCR
+  'You see four stacks of EXIT signs here.  Two stacks are green 'H,LFCR
+  'signs; the other two are red signs.  The red signs are dimly  'H,LFCR
+  'glowing.'Z
+         SWISSETX
+GLOWING  SWISSTXT
+  LFCR,'Glowing room    'H,LFCR
+  'The very air of this room is glowing with a bright red glow.'Z
+         SWISSETX
+HEAP     SWISSTXT
+  LFCR,'Heap            'H,LFCR
+  'You have just been added to the scrap heap.  A sign on the    'H,LFCR
+  'wall reads, ''ONLY LOSERS ARE ADDED TO THE HEAP.''  This room 'H,LFCR
+  'contains many pointers, all pointing to some piece of the     'H,LFCR
+  'heap.  One pointer is now aimed at your nose.  Several other  'H,LFCR
+  'nearby pointers point to a ladder leading up through the      'H,LFCR
+  'ceiling.'Z
+         SWISSETX
+WARNING  SWISSTXT
+  LFCR,'Warning room    'H,LFCR
+  'This is the antechamber to the Hall of Testing.  Carved above 'H,LFCR
+  'the Eastern portal, you read:                                 'H,LFCR
+  'Only a Master Adventurer may traverse the Hall of Testing.'Z
+         SWISSETX
+         QUAL
+SW@TEST  EQUALS    /SWSDAT/NE+1
+         QUAL      *
+TESTDUP  ECHO      NUM="SW$ENGL",NAME="SW$ARAB"
+TEST_NUM   SWISSTXT
+  LFCR,'Testing Station No. NUM'H,LFCR
+  'A pulsing curtain of light blocks your passage to the East.'H,LFCR
+  'A red sign on the curtain reads:'H,LFCR
+  '      You must first find CHECKPOINT NAME_.'Z
+         SWISSETX
+TESTDUP  ENDDUP
+EXAM     SWISSTXT
+  LFCR,'Final examination room'H,LFCR
+  'This is the final examination room.  A sign above the North   'H,LFCR
+  'portal reads ''Hall of Testing.''  The East portal reads      'H,LFCR
+ '''Scrap Heap.''  The West portal reads ''Victory Circle.'''H,LFCR,LFCR
+  'Your examination, naturally, will consist of 16 questions.'Z
+         SWISSETX
+         QUAL
+SW@EXAM  EQUALS    /SWSDAT/NE
+         QUAL      *
+VICTORY  SWISSTXT
+  LFCR,'Victory circle  'H,LFCR
+  'You stand in a large room, surrounded by mounds, stacks, and  'H,LFCR
+  'heaps of treasure.  This plethora of wealth is surrounded by a'H,LFCR
+  'deep ditch.  You cannot cross the ditch.  Perhaps you will die'H,LFCR
+  'with your wealth.                                   'H,LFCR,LFCR
+  'A shimmering ladder appears from above.  Though barely visible'H,LFCR
+  'you might be able to climb it.'Z
+         SWISSETX
+KERNEL   SWISSTXT
+  LFCR,'The Kernel      'H,LFCR
+  'You have now returned to the Kernel.  Congratulations!'H,LFCR
+  '(Exit in any direction)'Z
+         SWISSETX
+*
+TAG1     BSS       0
+         QUAL
+SW@BEGIN EQUALS    /SWSDAT/TAG1
+         QUAL      *
+
+*  The extra paths from Zurich are for testing purposes.
+
+*ZURICH  SWISSTXS  N=LEVEL1,S=BERN,SM=SW$TRAIN,E=HEAP,WEST=LEVEL2,D=EXAM
+ZURICH   SWISSTXS  S=BERN,SM=SW$TRAIN,WEST=BASEL,WM=SW$TRAIN
+PARIS    SWISSTXS  E=BERN,EM=SW$TRAIN
+GENEVA   SWISSTXS  N=LAUSANN,NM=SW$TRAIN
+MILAN    SWISSTXS  N=BRIG,NM=SW$TRAIN
+BASEL    SWISSTXS  S=BERN,SM=SW$TRAIN,WEST=NEUCHAT,WM=SW$TRAIN
+LUZERN   SWISSTXS  N=ZUG,NM=SW$TRAIN,EM=SW$TRAIN,WM=SW$TRAIN,WEST=BERN,_
+,__________________E=SCHWYZ
+NEUCHAT  SWISSTXS  N=BASEL,NM=SW$TRAIN,EM=SW$TRAIN,E=BERN
+MONTREU  SWISSTXS  E=SPIEZ,EM=SW$TRAIN,WM=SW$TRAIN,WEST=LAUSANN
+JUNGFRA  SWISSTXS  EM=SW$BACK,WM=SW$BACK,WEST=INTERLA,E=INTERLA
+SCHWYZ   SWISSTXS  N=ZUG,NM=SW$TRAIN,WM=SW$TRAIN,WEST=LUZERN
+ZUG      SWISSTXS  S=SCHWYZ,SM=SW$TRAIN,WM=SW$TRAIN,WEST=LUZERN
+LOTSCHB  SWISSTXS  N=SPIEZ,NM=SW$TRAIN,EM=SW$TRAIN,E=BRIG
+SPIEZ    SWISSTXS  N=THUN,NM=SW$TRAIN,EM=SW$TRAIN,WM=SW$TRAIN,__________
+,__________________SM=SW$TRAIN,S=LOTSCHB,E=INTERLA,WEST=MONTREU
+BRIG     SWISSTXS  S=ZERMATT,SM=SW$ASIDE,WEST=LOTSCHB,WM=SW$TRAIN
+ZERMATT  SWISSTXS  N=BRIG,NM=SW$BACK
+INTERLA  SWISSTXS  E=JUNGFRA,WEST=SPIEZ,EM=SW$ASIDE,WM=SW$TRAIN
+LAUSANN  SWISSTXS  N=BERN,NM=SW$TRAIN,WEST=MONTREU,WM=SW$TRAIN
+BERN     SWISSTXS  WEST=LAUSANN,WM=SW$TRAIN,S=THUN,SM=SW$TRAIN,E=LUZERN,
+,__________________EM=SW$TRAIN,N=BASEL,NM=SW$TRAIN
+THUN     SWISSTXS  N=BERN,NM=SW$TRAIN,S=SPIEZ,SM=SW$TRAIN,U=ENTRANC
+ENTRANC  SWISSTXS  S=THUN,D=THUN,E=COURT
+COURT    SWISSTXS  WEST=ENTRANC,U=GALLERY
+GALLERY  SWISSTXS  E=PRISON,N=TOYS,WEST=STAIRS,D=COURT,EM=SW$ASIDE
+PRISON   SWISSTXS  WEST=GALLERY,WM=SW$BACK
+TOYS     SWISSTXS  WEST=GALLERY,D=GALLERY,U=ATTIC
+ATTIC    SWISSTXS  D=TOYS,N=NVIEW,S=SVIEW,E=EVIEW,NM=SW$ASIDE,__________
+,__________________SM=SW$ASIDE,EM=SW$ASIDE,WM=SW$ASIDE,WEST=WVIEW
+NVIEW    SWISSTXS  S=ATTIC,SM=SW$BACK
+SVIEW    SWISSTXS  N=ATTIC,NM=SW$BACK
+EVIEW    SWISSTXS  WEST=ATTIC,WM=SW$BACK
+WVIEW    SWISSTXS  E=ATTIC,EM=SW$BACK
+STAIRS   SWISSTXS  E=GALLERY,D=ARTIFAC
+ARTIFAC  SWISSTXS  U=STAIRS,D=KITCHEN
+KITCHEN  SWISSTXS  U=ARTIFAC,D=TRAP,S=TRAP
+TRAP     SWISSTXS  D=LEVEL1
+LEVEL1   SWISSTXS  N=MAZE03,S=LEVEL1,E=LEVEL1,WEST=LEVEL1,D=LEVEL2
+LEVEL2   SWISSTXS  N=LEVEL2,E=SIGNS,WEST=LEVEL2,D=LEVEL2,U=LEVEL1
+MAZE01 SWISSTXS N=MAZE07,S=MAZE01,E=MAZE02,WEST=MAZE01,D=MAZE01,U=MAZE06
+MAZE02 SWISSTXS N=MAZE02,S=MAZE02,E=MAZE08,WEST=MAZE07,D=MAZE02,U=MAZE01
+MAZE03 SWISSTXS N=MAZE08,S=MAZE03,E=MAZE04,WEST=MAZE03,D=MAZE09,U=LEVEL1
+MAZE04 SWISSTXS N=MAZE04,S=MAZE04,E=MAZE05,WEST=MAZE04,D=MAZE10,U=MAZE03
+MAZE05 SWISSTXS N=MAZE10,S=MAZE05,E=MAZE10,WEST=MAZE04,D=MAZE05,U=MAZE05
+MAZE06 SWISSTXS N=MAZE15,S=MAZE11,E=MAZE07,WEST=MAZE06,D=MAZE15,U=MAZE01
+MAZE07 SWISSTXS N=MAZE07,S=MAZE02,E=MAZE07,WEST=MAZE06,D=MAZE07,U=MAZE01
+MAZE08 SWISSTXS N=MAZE13,S=MAZE08,E=MAZE14,WEST=MAZE02,D=MAZE08,U=MAZE08
+MAZE09 SWISSTXS N=MAZE14,S=MAZE09,E=MAZE10,WEST=MAZE09,D=MAZE09,U=MAZE09
+MAZE10 SWISSTXS N=MAZE14,S=MAZE10,E=MAZE10,WEST=MAZE09,D=MAZE05,U=MAZE04
+MAZE11 SWISSTXS N=MAZE11,S=MAZE06,E=MAZE12,WEST=MAZE11,D=MAZE11,U=MAZE11
+MAZE12 SWISSTXS N=MAZE12,S=MAZE12,E=MAZE13,WEST=MAZE11,D=MAZE12,U=MAZE12
+MAZE13 SWISSTXS N=MAZE13,S=MAZE08,E=MAZE13,WEST=MAZE12,D=MAZE13,U=MAZE13
+MAZE14 SWISSTXS N=MAZE14,S=MAZE09,E=MAZE10,WEST=MAZE08,D=MAZE14,U=MAZE14
+MAZE15 SWISSTXS N=MAZE15,S=MAZE15,E=MAZE16,WEST=MAZE15,D=MAZE15,U=MAZE06
+MAZE16 SWISSTXS   N=VIEW,S=MAZE16,E=MAZE16,WEST=MAZE15,D=MAZE16,U=MAZE16
+VIEW   SWISSTXS S=MAZE16
+SIGNS  SWISSTXS E=EXITSTA,WEST=LEVEL2
+EXITSTA  SWISSTXS  E=GLOWING,WEST=SIGNS
+GLOWING  SWISSTXS  N=HEAP,E=WARNING,WEST=EXITSTA
+HEAP     SWISSTXS  N=HEAP,S=HEAP,E=HEAP,WEST=HEAP,D=HEAP,U=KERNEL
+WARNING  SWISSTXS  E=TEST01,WEST=GLOWING
+TEST01   SWISSTXS  E=TEST02,EM=SW$SCORE,WEST=WARNING
+TEST02   SWISSTXS  E=TEST03,EM=SW$SCORE,WEST=TEST01
+TEST03   SWISSTXS  E=TEST04,EM=SW$SCORE,WEST=TEST02
+TEST04   SWISSTXS  E=TEST05,EM=SW$SCORE,WEST=TEST03
+TEST05   SWISSTXS  E=TEST06,EM=SW$SCORE,WEST=TEST04
+TEST06   SWISSTXS  E=TEST07,EM=SW$SCORE,WEST=TEST05
+TEST07   SWISSTXS  E=TEST08,EM=SW$SCORE,WEST=TEST06
+TEST08   SWISSTXS  E=TEST09,EM=SW$SCORE,WEST=TEST07
+TEST09   SWISSTXS  E=TEST10,EM=SW$SCORE,WEST=TEST08
+TEST10   SWISSTXS  E=TEST11,EM=SW$SCORE,WEST=TEST09
+TEST11   SWISSTXS  E=TEST12,EM=SW$SCORE,WEST=TEST10
+TEST12   SWISSTXS  E=TEST13,EM=SW$SCORE,WEST=TEST11
+TEST13   SWISSTXS  E=TEST14,EM=SW$SCORE,WEST=TEST12
+TEST14   SWISSTXS  E=TEST15,EM=SW$SCORE,WEST=TEST13
+TEST15   SWISSTXS  E=TEST16,EM=SW$SCORE,WEST=TEST14
+TEST16   SWISSTXS  E=EXAM,EM=SW$SCORE,WEST=TEST15
+EXAM     SWISSTXS  N=TEST16,E=HEAP,WEST=VICTORY,WM=SW$PASS
+VICTORY  SWISSTXS  U=KERNEL
+KERNEL   SWISSTXS  N=KERNEL,S=KERNEL,E=KERNEL,WEST=KERNEL,D=KERNEL,_____
+,__________________U=KERNEL
+
+         QUAL
+SW@NE    EQUALS    /SWSDAT/NE
+SW@FINAL EQUALS    SW@NE
+         QUAL      *
+
+*  Now use the same format for other types of text
+
+         BSS       0
+NE       SET       0
+PASS     SWISSTXT
+         LFCR,'You have passed.'Z
+         SWISSETX
+         ERRIF     NE,NE,SW$PASS
+SCORE    SWISSTXT
+         LFCR,'Proceed, O Master Adventurer.'H,0
+         SWISSETX
+         ERRIF    NE,NE,SW$SCORE
+QUIT     SWISSTXT
+         LFCR,'Alert!       Alert!'H,LFCR
+         'Adventurer is trying to leave!'H,LFCR,LFCR
+         'You hear a loud shriek. . .'H,LFCR,LFCR,LFCR
+         'A deep voice intones:'H,LFCR
+         'Begone, adventurer.  Return again when you dare.'H,LFCR
+         LFCR,'Your surroundings vanish.  So do you...',0
+         SWISSETX
+         ERRIF    NE,NE,SW$QUIT
+WALK     SWISSTXT
+         LFCR,'Proceeding . . .'H,0
+         SWISSETX
+         ERRIF    NE,NE,SW$WALK
+TRAIN    SWISSTXT
+         LFCR,'You board the HYPERtrain and soon reach 'H,
+         'your destination.'H,0
+         SWISSETX
+         ERRIF    NE,NE,SW$TRAIN
+ASIDE    SWISSTXT
+         LFCR,'You make a side trip . . .'H,0
+         SWISSETX
+         ERRIF    NE,NE,SW$ASIDE
+BACK     SWISSTXT
+         LFCR,'You head back whence you came . . .'H,0
+         SWISSETX
+         ERRIF    NE,NE,SW$BACK
+*
+TAG2     BSS       0
+         QUAL
+SW@TRAVL EQUALS    /SWSDAT/TAG2
+         QUAL      *
+PASS     SWISSTXS
+SCORE    SWISSTXS
+QUIT     SWISSTXS
+WALK     SWISSTXS
+TRAIN    SWISSTXS
+ASIDE    SWISSTXS
+BACK     SWISSTXS
+
+         ERRIF     NE,NE,SW$MAX
+
+NE       SET       0
+
+*  The snide remark library
+
+*
+         BSS       0
+SNIDE1   SWISSTXT
+         LFCR,'You may not go that way.'H,0
+         SWISSETX
+SNIDE2   SWISSTXT
+         LFCR,'Your attempt to enter forbidden territory is'H,LFCR
+         'quickly repulsed.'H,0
+         SWISSETX
+SNIDE3   SWISSTXT
+         LFCR,'No way.'H,0
+         SWISSETX
+SNIDE4   SWISSTXT
+         LFCR,'That is a restricted area.'H,0
+         SWISSETX
+SNIDE5   SWISSTXT
+         LFCR,'Go somewhere else.'H,0
+         SWISSETX
+SNIDE6   SWISSTXT
+         LFCR,'Such a move would put you in the TWILIGHT ZONE.'H,0
+         SWISSETX
+SNIDE7   SWISSTXT
+         LFCR,'Foolish move.'H,0
+         SWISSETX
+SNIDE8   SWISSTXT
+         LFCR,'You try and try, but cannot force your way through'H,LFCR
+         'the wall.'H,0
+         SWISSETX
+*
+TAG3     BSS       0
+         QUAL
+SW@SNIDE EQUALS    /SWSDAT/TAG3
+         QUAL      *
+SNIDE1   SWISSTXS
+SNIDE2   SWISSTXS
+SNIDE3   SWISSTXS
+SNIDE4   SWISSTXS
+SNIDE5   SWISSTXS
+SNIDE6   SWISSTXS
+SNIDE7   SWISSTXS
+SNIDE8   SWISSTXS
+
+         ERRIF     NE,NE,D'8
+
+         BSSZ      0
+NE       SET       0
+
+SIGNS    ECHO      NUM="SW$ENGL",NAME="SW$ARAB"
+NAMMIC   MICRO     'NAME          ',D'14
+CHECK_NUM SWISSTXT
+         'The following sign stands before you:'H,LFCR
+         '     ------------   'H,LFCR
+         '    /            \  'H,LFCR
+         '   /              \ 'H,LFCR
+         '  |  Checkpoint    |'H,LFCR
+         '  |                |'H,LFCR
+         '  |  "NAMMIC"|'H,LFCR
+         '   \              / 'H,LFCR
+         '    \            /  'H,LFCR
+         '     ------------   'H,LFCR
+         '          XX        'H,LFCR
+         '          XX        'H,LFCR
+         '          XX        'H,LFCR
+         '         XXXX'Z
+         SWISSETX
+SIGNS    ENDDUP
+
+TAG4     BSS       0
+         QUAL
+SW@CHECK EQUALS    /SWSDAT/TAG4
+         QUAL      *
+
+CKDUP    ECHO      NUM="SW$ENGL",ROOM="CKMIC"
+CHECK_NUM SWISSTXS N=ROOM,S=ROOM,E=ROOM,WEST=ROOM,U=ROOM,D=ROOM
+CKDUP    ENDDUP
+
+         ERRIF     NE,NE,D'16
+
+*        LIST      *
+         END
+*ID TN+101BA,DC=AT
+*D AT.4707
+OVLTBL   EQUALS   O'720        .Maximum overlay number
+*ID TN+101BK,DC=K
+*B K.380
+         ENTRY    OVLTABLE     .Allow SWISS access
+*ID TN+101BC,DC=CALL
+*B CALL.260
+         OCOME     SWISS,FROM=IOP0+IOP1+IOP2+IOP3
+*ID TN+101BO,DC=OVLNUM
+*I OVLNUM.103
+SWISS    OVNM      (Swiss adventure, root overlay)
+SWSDAT   OVNM      (Swiss data)
+SWCHECK  OVNM      (Display checkpoint sign)
+SWSHOW   OVNM      (Display location text, get new location)
+SWSLOC   OVNM      (Read a description entry into Local Memory)
+SWSMOV   OVNM      (Display text showing travel)
+SWSNEX   OVNM      (Get new valid location)
+SWSNO    OVNM      (Display snide remark)
+SWSWEL   OVNM      (Print welcome message and instructions)
+*MOVEDK SWISS:STATS
+*MOVEDK SWSDAT:SWISS
+*MOVEDK SWSHOW:SWSDAT
+*MOVEDK SWSLOC:SWSHOW
+*MOVEDK SWSMOV:SWSLOC
+*MOVEDK SWSNEX:SWSMOV
+*MOVEDK SWSNO:SWSNEX
+*MOVEDK SWSWEL:SWSNO
+*MOVEDK SWCHECK:SWISS
